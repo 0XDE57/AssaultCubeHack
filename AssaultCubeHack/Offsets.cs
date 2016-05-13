@@ -23,6 +23,6 @@ namespace AssaultCubeHack {
         public const int a1 = 0x378;
         public const int a2 = 0x10;
         public const int ammo = 0x28;
-        public const int ammoCap = 0x0;
+        public const int ammoClip = 0x0;
     }
 }

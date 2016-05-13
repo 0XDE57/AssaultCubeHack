@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
+using System.Collections.Generic;
 
 namespace AssaultCubeHack {
     class Program {
@@ -29,7 +30,8 @@ namespace AssaultCubeHack {
         
 
         public static void Update() {
-            
+            Player self;
+            List<Player> players = new List<Player>();
 
             //foreach (Process p in Process.GetProcesses()) Console.WriteLine(p.Id + ": " + p.ProcessName);
 
@@ -43,33 +45,35 @@ namespace AssaultCubeHack {
                 while (true) {
                     Console.Clear();
                     //int game = Memory.Read<int>(offset_Game);
-                    int pointerPlayer = Memory.Read<int>(Offsets.baseGame + Offsets.playerEntity);
+                    int pointerPlayerSelf = Memory.Read<int>(Offsets.baseGame + Offsets.playerEntity);
+                    self = new Player(pointerPlayerSelf);
+                    
                     //int pointerPlayer = Memory.Read<int>(0x509b74);
-                    Console.WriteLine("Health: " + Memory.Read<int>(pointerPlayer + Offsets.health));
-                    Console.WriteLine("Position: " + Memory.ReadVector3(pointerPlayer + Offsets.position));
-                    Console.WriteLine("Velocity: " + Memory.ReadVector3(pointerPlayer + Offsets.velocity));
-                    Console.WriteLine("Yaw: " + Memory.Read<float>(pointerPlayer + Offsets.yaw));
-                    Console.WriteLine("Pitch: " + Memory.Read<float>(pointerPlayer + Offsets.pitch));
-
-                    Memory.Write<float>(pointerPlayer + Offsets.yaw, 360);
-
-                    Int32 pa1 = Memory.Read<Int32>(pointerPlayer + Offsets.a1);
-                    Int32 pa2 = Memory.Read<Int32>(pa1 + Offsets.a2);
-                    Console.WriteLine("Ammo: " + Memory.Read<int>(pa2 + Offsets.ammo) + "/" + Memory.Read<int>(pa2 + Offsets.ammoCap));
+                    Console.WriteLine("Health: " + self.health);
+                    Console.WriteLine("Position: " + self.position);
+                    Console.WriteLine("Velocity: " + self.velocity);
+                    Console.WriteLine("Yaw: " + self.yaw);
+                    Console.WriteLine("Pitch: " + self.pitch);
+                    Console.WriteLine("Ammo: " + self.ammo + "/" + self.ammoClip);
 
 
                     Console.WriteLine("-----------------");
-                    int players = Memory.Read<int>(Offsets.baseGame + Offsets.numplayers);
+                    int numPlayers = Memory.Read<int>(Offsets.baseGame + Offsets.numplayers);
                     int pointerPlayerArray = Memory.Read<int>(Offsets.baseGame + Offsets.playerArray);
-                    for (int i = 0; i < players-1; i++) {
-                        int pPlayer = Memory.Read<int>(pointerPlayerArray + (i+1) * 0x4);
-                        string pName = Memory.ReadString2(pPlayer + Offsets.name, 12).Remove(0,1);
+                    for (int i = 0; i < numPlayers-1; i++) {
+                        int pointerPlayer = Memory.Read<int>(pointerPlayerArray + (i+1) * 0x4);
 
-                        Console.WriteLine(pName + ": " + Memory.ReadVector3(pPlayer + Offsets.position));
-                        
+                        Player player = new Player(pointerPlayer);
+                       
+                        Console.WriteLine(player.name + ": " + player.position);
+
+
+                        //test, send everyone to the ceiling
+                        //Memory.WriteVector3(pPlayer + Offsets.velocity, new Vector3(0, 0, 5));
                     }
 
-
+                    //test messing with player
+                    //Memory.Write<float>(pointerPlayer + Offsets.yaw, 360);
                     //Memory.Write<Int32>(pointerPlayer + healthOffset, 100);
                     //p += 0.5f;
                     //Memory.Write<float>(pointerPlayer + yaw, p);
