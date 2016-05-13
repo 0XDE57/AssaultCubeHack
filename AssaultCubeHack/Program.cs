@@ -7,15 +7,17 @@ using System.Collections.Generic;
 
 namespace AssaultCubeHack {
     class Program {
+
+        static Player self;
+        static List<Player> players = new List<Player>();
+
         //Low level key hooking
         private const int WH_KEYBOARD_LL = 13;
         private const int WM_KEYDOWN = 0x0100;
         private static LowLevelKeyboardProc _proc = HookCallback;
         private static IntPtr _hookID = IntPtr.Zero;
         private delegate IntPtr LowLevelKeyboardProc( int nCode, IntPtr wParam, IntPtr lParam);
-
-        
-
+    
         static void Main(string[] args) {
             //start thread for playing with memory
             Thread t = new Thread(Update);
@@ -29,9 +31,7 @@ namespace AssaultCubeHack {
         }
         
 
-        public static void Update() {
-            Player self;
-            List<Player> players = new List<Player>();
+        public static void Update() {    
 
             //foreach (Process p in Process.GetProcesses()) Console.WriteLine(p.Id + ": " + p.ProcessName);
 
@@ -43,7 +43,8 @@ namespace AssaultCubeHack {
                 Console.WriteLine("Handle: " + handle);
                 Thread.Sleep(1000);
                 while (true) {
-                    Console.Clear();
+                    //Console.Clear();
+
                     //int game = Memory.Read<int>(offset_Game);
                     int pointerPlayerSelf = Memory.Read<int>(Offsets.baseGame + Offsets.playerEntity);
                     self = new Player(pointerPlayerSelf);
@@ -51,35 +52,49 @@ namespace AssaultCubeHack {
                     self.Ammo = 7331;
                     self.AmmoClip = 999;
                     
-                    //int pointerPlayer = Memory.Read<int>(0x509b74);
+                    /*
                     Console.WriteLine("Health: " + self.Health);
                     Console.WriteLine("Position: " + self.Position);
                     Console.WriteLine("Velocity: " + self.Velocity);
                     Console.WriteLine("Yaw: " + self.Yaw);
                     Console.WriteLine("Pitch: " + self.Pitch);
                     Console.WriteLine("Ammo: " + self.Ammo + "/" + self.AmmoClip);
+                    */
 
-
-                    Console.WriteLine("-----------------");
+                    players.Clear();
                     int numPlayers = Memory.Read<int>(Offsets.baseGame + Offsets.numplayers);
                     int pointerPlayerArray = Memory.Read<int>(Offsets.baseGame + Offsets.playerArray);
                     for (int i = 0; i < numPlayers-1; i++) {
                         int pointerPlayer = Memory.Read<int>(pointerPlayerArray + (i+1) * 0x4);
-
                         Player player = new Player(pointerPlayer);
-                       
-                        Console.WriteLine(player.name + ": " + player.Position + " : " + player.Velocity);
-
-                        //player.Velocity = new Vector3(0,0,5);//test, send everyone to the ceiling
-                        
+                        players.Add(player);                    
                     }
 
-                    //test messing with player
-                    //Memory.Write<float>(pointerPlayer + Offsets.yaw, 360);
-                    //Memory.Write<Int32>(pointerPlayer + healthOffset, 100);
-                    //p += 0.5f;
-                    //Memory.Write<float>(pointerPlayer + yaw, p);
-                    Thread.Sleep(100);
+
+
+                    //Console.WriteLine("-----------------");
+                    foreach (Player p in players) {
+                        //Console.WriteLine(p.Name + ": " + p.Position);
+                        
+                        //p.Velocity = new Vector3(0,0,5);//test, send everyone to the ceiling
+                        //player.Pitch = 90; make everyone look up
+                        //player.Yaw = 0;
+                        //p.Health = 1000;
+                    }
+
+                    //test look at first player
+                    if (players[0] != null) {
+                        
+                        float dx = players[0].Position.X - self.Position.X;
+                        float dy = players[0].Position.Y - self.Position.Y;
+                        double angle = Math.Atan2(dy, dx) * 180f / Math.PI;
+
+                        self.Yaw = (float)angle+90;
+
+                        //Console.WriteLine(players[0].Name + ": " + players[0].Position + " - " + angle + " -> " + self.Yaw);
+                    }
+
+                    Thread.Sleep(10);
                 }
             } else {
                 Console.WriteLine("Process not found");
@@ -108,14 +123,15 @@ namespace AssaultCubeHack {
                 //Console.WriteLine((Keys)vkCode);
 
                 if ((Keys)vkCode == Keys.PageUp) {
-                    //Int32 pointerPlayer = Memory.Read<Int32>(playerEntity);
-                    //Memory.WriteVector3(pointerPlayer + velocity, new Vector3(0, 0, 10));
+                    //send your player to ceiling
+                    self.Velocity = new Vector3(0, 0, 10);
                 }
+
                 if ((Keys)vkCode == Keys.PageDown) {
-                    //Int32 pointerPlayer = Memory.Read<Int32>(playerEntity);
-                    //Vector3 pos = Memory.ReadVector3(pointerPlayer + position);
-                    //pos.X += 2;
-                    //Memory.WriteVector3(pointerPlayer + position, pos);
+                    foreach(Player p in players) {
+                        p.Velocity = new Vector3(0, 0, 5);//test, send everyone to the ceiling
+                        //p.Health = 0;
+                    }
                 }
 
             }

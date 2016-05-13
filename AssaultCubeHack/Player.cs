@@ -8,11 +8,13 @@ namespace AssaultCubeHack {
     class Player {
         private int pointerPlayer;
 
-        public string name;
+        private string name;
         private Vector3 position,velocity;
         private float yaw, pitch, roll;
         private int health, healthMax;
         private int ammo, ammoClip;
+
+        public string Name { get { return name; } }
 
         public int Health {
             get { return health; }

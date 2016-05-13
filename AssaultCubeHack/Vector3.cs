@@ -9,10 +9,10 @@ namespace AssaultCubeHack {
 
         public Vector3() { }
 
-        public Vector3(float _X, float _Y, float _Z) { 
-            X = _X; 
-            Y = _Y; 
-            Z = _Z; 
+        public Vector3(float x, float y, float z) { 
+            X = x; 
+            Y = y; 
+            Z = z; 
         }
 
         public override string ToString() {
