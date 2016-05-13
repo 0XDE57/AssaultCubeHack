@@ -47,14 +47,17 @@ namespace AssaultCubeHack {
                     //int game = Memory.Read<int>(offset_Game);
                     int pointerPlayerSelf = Memory.Read<int>(Offsets.baseGame + Offsets.playerEntity);
                     self = new Player(pointerPlayerSelf);
+                    self.Health = 1337;
+                    self.Ammo = 7331;
+                    self.AmmoClip = 999;
                     
                     //int pointerPlayer = Memory.Read<int>(0x509b74);
-                    Console.WriteLine("Health: " + self.health);
-                    Console.WriteLine("Position: " + self.position);
-                    Console.WriteLine("Velocity: " + self.velocity);
-                    Console.WriteLine("Yaw: " + self.yaw);
-                    Console.WriteLine("Pitch: " + self.pitch);
-                    Console.WriteLine("Ammo: " + self.ammo + "/" + self.ammoClip);
+                    Console.WriteLine("Health: " + self.Health);
+                    Console.WriteLine("Position: " + self.Position);
+                    Console.WriteLine("Velocity: " + self.Velocity);
+                    Console.WriteLine("Yaw: " + self.Yaw);
+                    Console.WriteLine("Pitch: " + self.Pitch);
+                    Console.WriteLine("Ammo: " + self.Ammo + "/" + self.AmmoClip);
 
 
                     Console.WriteLine("-----------------");
@@ -65,11 +68,10 @@ namespace AssaultCubeHack {
 
                         Player player = new Player(pointerPlayer);
                        
-                        Console.WriteLine(player.name + ": " + player.position);
+                        Console.WriteLine(player.name + ": " + player.Position + " : " + player.Velocity);
 
-
-                        //test, send everyone to the ceiling
-                        //Memory.WriteVector3(pPlayer + Offsets.velocity, new Vector3(0, 0, 5));
+                        //player.Velocity = new Vector3(0,0,5);//test, send everyone to the ceiling
+                        
                     }
 
                     //test messing with player
