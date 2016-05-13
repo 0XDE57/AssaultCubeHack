@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MemoryTest {
+namespace AssaultCubeHack {
     public class Vector4 {
         public float X;
         public float Y;

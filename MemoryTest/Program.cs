@@ -4,7 +4,7 @@ using System.Threading;
 using System.Windows.Forms;
 using System.Runtime.InteropServices;
 
-namespace MemoryTest {
+namespace AssaultCubeHack {
     class Program {
         //Low level key hooking
         private const int WH_KEYBOARD_LL = 13;

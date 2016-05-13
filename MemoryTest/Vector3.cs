@@ -1,7 +1,7 @@
 ﻿
 using System;
 
-namespace MemoryTest {
+namespace AssaultCubeHack {
     public class Vector3 {
         public float X;
         public float Y;

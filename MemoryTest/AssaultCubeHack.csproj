@@ -7,8 +7,8 @@
     <ProjectGuid>{AB426923-AEF1-4925-BF1C-F6C37FEDA00E}</ProjectGuid>
     <OutputType>Exe</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>MemoryTest</RootNamespace>
-    <AssemblyName>MemoryTest</AssemblyName>
+    <RootNamespace>AssaultCubeHack</RootNamespace>
+    <AssemblyName>AssaultCubeHack</AssemblyName>
     <TargetFrameworkVersion>v4.5.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -60,11 +60,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Matrix.cs" />
     <Compile Include="Offsets.cs" />
     <Compile Include="AxisAlignedBox.cs" />
     <Compile Include="GlobalKeyboardHook.cs" />
     <Compile Include="Memory.cs" />
-    <Compile Include="Player.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Vector3.cs" />
@@ -72,6 +72,7 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
+    <None Include="ClassDiagram1.cd" />
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include=".NETFramework,Version=v4.5.2">

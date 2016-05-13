@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 
-namespace MemoryTest {
+namespace AssaultCubeHack {
     class Managed {
         // READ FLAGS
         public static uint PROCESS_VM_READ = 0x0010;
@@ -207,7 +207,7 @@ namespace MemoryTest {
             Write<float>(baseAddress + 8, vec.Z);//z
         }
 
-        /*
+        
         public static Matrix ReadMatrix(Int64 baseAddress) {
             Matrix tmp = new Matrix();
 
@@ -236,8 +236,7 @@ namespace MemoryTest {
             tmp.M43 = BitConverter.ToSingle(buffer, (14 * 4));
             tmp.M44 = BitConverter.ToSingle(buffer, (15 * 4));
             return tmp;
-        }
-        */
+        }       
 
         public static bool IsValid(Int64 address) {
             return (address >= 0x10000 && address < 0x000F000000000000);

@@ -4,7 +4,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace MemoryTest {
+namespace AssaultCubeHack {
     class Offsets {
         //memory addresses
         public const int baseGame = 0x0050F4E8;
