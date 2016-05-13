@@ -85,16 +85,26 @@ namespace AssaultCubeHack {
                     //test look at first player
                     if (players[0] != null) {
                         
+                        //calculate horizontal angle between enemy and player (yaw)
                         float dx = players[0].Position.X - self.Position.X;
                         float dy = players[0].Position.Y - self.Position.Y;
-                        double angle = Math.Atan2(dy, dx) * 180f / Math.PI;
+                        double angleYaw = Math.Atan2(dy, dx) * 180 / Math.PI;
 
-                        self.Yaw = (float)angle+90;
+                        //calculate verticle angle between enemy and player (pitch)
+                        double distance = Math.Sqrt(dx * dx + dy * dy);
+                        float dz = players[0].Position.Z - self.Position.Z;
+                        double anglePitch = Math.Atan2(dz, distance) * 180 / Math.PI;
 
-                        //Console.WriteLine(players[0].Name + ": " + players[0].Position + " - " + angle + " -> " + self.Yaw);
+                        //set angles to calculated angles
+                        self.Yaw = (float)angleYaw+90;
+                        self.Pitch = (float)anglePitch;
+
+
+                        //Console.Clear();
+                        //Console.WriteLine(players[0].Name + ": " + self.Pitch + "-" + anglePitch + " - " + dz);
                     }
 
-                    Thread.Sleep(10);
+                    //Thread.Sleep(50);
                 }
             } else {
                 Console.WriteLine("Process not found");
