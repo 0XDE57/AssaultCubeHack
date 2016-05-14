@@ -13,8 +13,11 @@ namespace AssaultCubeHack {
         private float yaw, pitch, roll;
         private int health, healthMax;
         private int ammo, ammoClip;
+        private int team;
 
         public string Name { get { return name; } }
+
+        public bool Team { get { return team == 1; } }
 
         public int Health {
             get { return health; }
@@ -65,6 +68,7 @@ namespace AssaultCubeHack {
             this.pointerPlayer = pointerPlayer;
 
             name = Memory.ReadString2(pointerPlayer + Offsets.name, 17).Remove(0, 1);
+            team = Memory.Read<int>(pointerPlayer + Offsets.team);
             health = Memory.Read<int>(pointerPlayer + Offsets.health);
             position = Memory.ReadVector3(pointerPlayer + Offsets.position);
             velocity = Memory.ReadVector3(pointerPlayer + Offsets.velocity);

@@ -43,7 +43,7 @@ namespace AssaultCubeHack {
                 Console.WriteLine("Handle: " + handle);
                 Thread.Sleep(1000);
                 while (true) {
-                    //Console.Clear();
+                    Console.Clear();
 
                     //int game = Memory.Read<int>(offset_Game);
                     int pointerPlayerSelf = Memory.Read<int>(Offsets.baseGame + Offsets.playerEntity);
@@ -74,29 +74,39 @@ namespace AssaultCubeHack {
 
                     //Console.WriteLine("-----------------");
                     foreach (Player p in players) {
+                        //Console.WriteLine(p.Name + ": " + Math.Round(p.Position.Distance(self.Position)));
                         //Console.WriteLine(p.Name + ": " + p.Position);
-                        
                         //p.Velocity = new Vector3(0,0,5);//test, send everyone to the ceiling
+                        //p.Position = new Vector3(130, 130, 10);
                         //player.Pitch = 90; make everyone look up
                         //player.Yaw = 0;
                         //p.Health = 1000;
                     }
 
+
                     //test look at first player
-                    if (players[0] != null) {
-                        
+                    if (players.Count > 0) {
+                        //players.Find(p => p.Position.Distance(self.Position) > 15);
+                        //double distance = players[0].Position.Distance(self.Position);
+                        Player target = players[0];
+                        foreach (Player player in players) {
+                            if (player.Team != self.Team && player.Health > 0 && player.Position.Distance(self.Position) < target.Position.Distance(self.Position)) {
+                                target = player;
+                            }
+                        }
+
                         //calculate horizontal angle between enemy and player (yaw)
-                        float dx = players[0].Position.X - self.Position.X;
-                        float dy = players[0].Position.Y - self.Position.Y;
+                        float dx = target.Position.X - self.Position.X;
+                        float dy = target.Position.Y - self.Position.Y;
                         double angleYaw = Math.Atan2(dy, dx) * 180 / Math.PI;
 
                         //calculate verticle angle between enemy and player (pitch)
                         double distance = Math.Sqrt(dx * dx + dy * dy);
-                        float dz = players[0].Position.Z - self.Position.Z;
+                        float dz = target.Position.Z - self.Position.Z;
                         double anglePitch = Math.Atan2(dz, distance) * 180 / Math.PI;
 
                         //set angles to calculated angles
-                        self.Yaw = (float)angleYaw+90;
+                        self.Yaw = (float)angleYaw + 90;
                         self.Pitch = (float)anglePitch;
 
 
@@ -131,16 +141,21 @@ namespace AssaultCubeHack {
                 int vkCode = Marshal.ReadInt32(lParam);
 
                 //Console.WriteLine((Keys)vkCode);
+                if ((Keys)vkCode == Keys.CapsLock) {
+                    
+                }
+
 
                 if ((Keys)vkCode == Keys.PageUp) {
                     //send your player to ceiling
                     self.Velocity = new Vector3(0, 0, 10);
                 }
 
-                if ((Keys)vkCode == Keys.PageDown) {
+                if ((Keys)vkCode == Keys.NumPad6) {
                     foreach(Player p in players) {
-                        p.Velocity = new Vector3(0, 0, 5);//test, send everyone to the ceiling
+                        //p.Velocity = new Vector3(0, 0, 5);//test, send everyone to the ceiling
                         //p.Health = 0;
+                        p.Position = new Vector3(130, 130, 10);
                     }
                 }
 
