@@ -4,17 +4,18 @@ using System.Runtime.InteropServices;
 using System.Windows.Forms;
 
 namespace Utilities {
-	/// <summary>
-	/// A class that manages a global low level keyboard hook
-	/// </summary>
-	class GlobalKeyboardHook {
+    /// <summary>
+    /// A class that manages a global low level keyboard hook
+    /// Retrieved from: http://www.codeproject.com/Articles/19004/A-Simple-C-Global-Low-Level-Keyboard-Hook
+    /// </summary>
+    class GlobalKeyboardHook {
 		#region Constant, Structure and Delegate Definitions
 		/// <summary>
 		/// defines the callback type for the hook
 		/// </summary>
-		public delegate int keyboardHookProc(int code, int wParam, ref keyboardHookStruct lParam);
+		public delegate int KeyboardHookProc(int code, int wParam, ref KeyboardHookStruct lParam);
 
-		public struct keyboardHookStruct {
+		public struct KeyboardHookStruct {
 			public int vkCode;
 			public int scanCode;
 			public int flags;
@@ -56,7 +57,7 @@ namespace Utilities {
 		/// Initializes a new instance of the <see cref="GlobalKeyboardHook"/> class and installs the keyboard hook.
 		/// </summary>
 		public GlobalKeyboardHook() {
-			hook();
+			Hook();
 		}
 
 		/// <summary>
@@ -64,7 +65,7 @@ namespace Utilities {
 		/// <see cref="GlobalKeyboardHook"/> is reclaimed by garbage collection and uninstalls the keyboard hook.
 		/// </summary>
 		~GlobalKeyboardHook() {
-			unhook();
+			Unhook();
 		}
 		#endregion
 
@@ -72,15 +73,15 @@ namespace Utilities {
 		/// <summary>
 		/// Installs the global hook
 		/// </summary>
-		public void hook() {
+		public void Hook() {
 			IntPtr hInstance = LoadLibrary("User32");
-			hhook = SetWindowsHookEx(WH_KEYBOARD_LL, hookProc, hInstance, 0);
+			hhook = SetWindowsHookEx(WH_KEYBOARD_LL, HookProc, hInstance, 0);
 		}
 
 		/// <summary>
 		/// Uninstalls the global hook
 		/// </summary>
-		public void unhook() {
+		public void Unhook() {
 			UnhookWindowsHookEx(hhook);
 		}
 
@@ -91,7 +92,7 @@ namespace Utilities {
 		/// <param name="wParam">The event type</param>
 		/// <param name="lParam">The keyhook event information</param>
 		/// <returns></returns>
-		public int hookProc(int code, int wParam, ref keyboardHookStruct lParam) {
+		public int HookProc(int code, int wParam, ref KeyboardHookStruct lParam) {
 			if (code >= 0) {
 				Keys key = (Keys)lParam.vkCode;
 				if (HookedKeys.Contains(key)) {
@@ -119,7 +120,7 @@ namespace Utilities {
 		/// <param name="threadId">The thread you want to attach the event to, can be null</param>
 		/// <returns>a handle to the desired hook</returns>
 		[DllImport("user32.dll")]
-		static extern IntPtr SetWindowsHookEx(int idHook, keyboardHookProc callback, IntPtr hInstance, uint threadId);
+		static extern IntPtr SetWindowsHookEx(int idHook, KeyboardHookProc callback, IntPtr hInstance, uint threadId);
 
 		/// <summary>
 		/// Unhooks the windows hook.
@@ -138,7 +139,7 @@ namespace Utilities {
 		/// <param name="lParam">The lparam.</param>
 		/// <returns></returns>
 		[DllImport("user32.dll")]
-		static extern int CallNextHookEx(IntPtr idHook, int nCode, int wParam, ref keyboardHookStruct lParam);
+		static extern int CallNextHookEx(IntPtr idHook, int nCode, int wParam, ref KeyboardHookStruct lParam);
 
 		/// <summary>
 		/// Loads the library.

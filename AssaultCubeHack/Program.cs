@@ -74,11 +74,12 @@ namespace AssaultCubeHack {
 
                     //Console.WriteLine("-----------------");
                     foreach (Player p in players) {
+
                         //Console.WriteLine(p.Name + ": " + Math.Round(p.Position.Distance(self.Position)));
                         //Console.WriteLine(p.Name + ": " + p.Position);
                         //p.Velocity = new Vector3(0,0,5);//test, send everyone to the ceiling
                         //p.Position = new Vector3(130, 130, 10);
-                        //player.Pitch = 90; make everyone look up
+                        //p.Pitch = 90; //make everyone look up
                         //player.Yaw = 0;
                         //p.Health = 1000;
                     }
@@ -106,8 +107,8 @@ namespace AssaultCubeHack {
                         double anglePitch = Math.Atan2(dz, distance) * 180 / Math.PI;
 
                         //set angles to calculated angles
-                        self.Yaw = (float)angleYaw + 90;
-                        self.Pitch = (float)anglePitch;
+                        //self.Yaw = (float)angleYaw + 90;
+                        //self.Pitch = (float)anglePitch;
 
 
                         //Console.Clear();
