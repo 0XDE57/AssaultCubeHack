@@ -19,8 +19,8 @@ namespace AssaultCubeHack {
             float dx = vector.X - X;
             float dy = vector.Y - Y;
             float dz = vector.Z - Z;
-            return (Math.Sqrt(dx * dx + dy * dy + dz * dz));
-        }
+            return Math.Sqrt(dx * dx + dy * dy + dz * dz);
+        }    
 
         public override string ToString() {
             return string.Format("{0} {1} {2}", Math.Round(X, 2), Math.Round(Y, 2), Math.Round(Z, 2));

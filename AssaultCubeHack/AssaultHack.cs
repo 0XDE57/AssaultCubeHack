@@ -103,12 +103,14 @@ namespace AssaultCubeHack {
                 if (aim) {
                     if (players.Count > 0) {
                         //find closest enemy player
-                        Player target = players[0];
+                        Player target = players.Find(p => p.Team != self.Team && p.Health > 0);
+                        if (target == null) {
+                            target = players[0];
+                        }                  
                         foreach (Player player in players) {
-                            if (player.Team != self.Team && player.Health > 0 && player.Position.Distance(self.Position) < target.Position.Distance(self.Position)) {
+                            if (player.Team != self.Team && player.Health > 0 && player.Position.Distance(self.Position) < target.Position.Distance(self.Position))
                                 target = player;
-                            }
-                        }
+                        }                       
 
                         //calculate horizontal angle between enemy and player (yaw)
                         float dx = target.Position.X - self.Position.X;
@@ -125,7 +127,7 @@ namespace AssaultCubeHack {
                         self.Pitch = (float)anglePitch;
                     }
                 }
-
+            
                 Thread.Sleep(0);
             }
         }
