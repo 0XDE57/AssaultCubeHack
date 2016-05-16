@@ -60,10 +60,11 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="AssaultHack.cs" />
+    <Compile Include="GlobalKeyboardHook.cs" />
     <Compile Include="Matrix.cs" />
     <Compile Include="Offsets.cs" />
     <Compile Include="AxisAlignedBox.cs" />
-    <Compile Include="GlobalKeyboardHook.cs" />
     <Compile Include="Memory.cs" />
     <Compile Include="Player.cs" />
     <Compile Include="Program.cs" />

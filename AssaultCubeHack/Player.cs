@@ -17,7 +17,7 @@ namespace AssaultCubeHack {
 
         public string Name { get { return name; } }
 
-        public bool Team { get { return team == 1; } }
+        public int Team { get { return team; } }
 
         public int Health {
             get { return health; }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Windows.Forms;
+using System.ComponentModel;
 
 namespace Utilities {
     /// <summary>
@@ -14,6 +15,9 @@ namespace Utilities {
 		/// defines the callback type for the hook
 		/// </summary>
 		public delegate int KeyboardHookProc(int code, int wParam, ref KeyboardHookStruct lParam);
+
+        //static reference to the delegate object to ensure the object can't be garbage collected (https://stackoverflow.com/questions/9957544)
+        private static KeyboardHookProc callbackDelegate;
 
 		public struct KeyboardHookStruct {
 			public int vkCode;
@@ -57,7 +61,12 @@ namespace Utilities {
 		/// Initializes a new instance of the <see cref="GlobalKeyboardHook"/> class and installs the keyboard hook.
 		/// </summary>
 		public GlobalKeyboardHook() {
-			Hook();
+            try {
+                Hook();
+            } catch (InvalidOperationException ex) {
+                MessageBox.Show("Error: " + ex.ToString());
+            }
+			
 		}
 
 		/// <summary>
@@ -65,7 +74,9 @@ namespace Utilities {
 		/// <see cref="GlobalKeyboardHook"/> is reclaimed by garbage collection and uninstalls the keyboard hook.
 		/// </summary>
 		~GlobalKeyboardHook() {
-			Unhook();
+            try {
+                Unhook();
+            } catch (Win32Exception) { }
 		}
 		#endregion
 
@@ -73,17 +84,23 @@ namespace Utilities {
 		/// <summary>
 		/// Installs the global hook
 		/// </summary>
-		public void Hook() {
-			IntPtr hInstance = LoadLibrary("User32");
-			hhook = SetWindowsHookEx(WH_KEYBOARD_LL, HookProc, hInstance, 0);
-		}
+        public void Hook() {
+            if (callbackDelegate != null) throw new InvalidOperationException("Can't hook more than once");
+            IntPtr hInstance = LoadLibrary("User32");
+            callbackDelegate = new KeyboardHookProc(HookProc);
+            hhook = SetWindowsHookEx(WH_KEYBOARD_LL, callbackDelegate, hInstance, 0);
+            if (hhook == IntPtr.Zero) throw new Win32Exception();
+        }
 
-		/// <summary>
-		/// Uninstalls the global hook
-		/// </summary>
-		public void Unhook() {
-			UnhookWindowsHookEx(hhook);
-		}
+        /// <summary>
+        /// Uninstalls the global hook
+        /// </summary>
+        public void Unhook() {
+            if (callbackDelegate == null) return;
+            bool ok = UnhookWindowsHookEx(hhook);
+            if (!ok) throw new Win32Exception();
+            callbackDelegate = null;
+        }
 
 		/// <summary>
 		/// The callback for the keyboard hook
