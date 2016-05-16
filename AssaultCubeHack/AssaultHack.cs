@@ -15,9 +15,13 @@ using Utilities;
 namespace AssaultCubeHack {
     public partial class AssaultHack : Form {
 
+        //target process
+        const string processName = "ac_client";
+        private Process process;
+
         //graphics to draw on screen
-        Graphics graphics;
-        //color used for transparency. anything draw in same color will not show up.
+        Graphics graphics;        
+        //color used for transparency. anything drawn in same color will not show up.
         Color colorTransparencyKey = Color.Black;
 
         //game objects
@@ -36,7 +40,8 @@ namespace AssaultCubeHack {
             this.TopMost = true; //set window on top of all others
             this.FormBorderStyle = FormBorderStyle.None; //remove form controls
             picBoxOverlay.Dock = DockStyle.Fill; //fill window with picturebox graphics
-            picBoxOverlay.BackColor = colorTransparencyKey;
+            picBoxOverlay.BackColor = colorTransparencyKey; //set overlay to transparent color
+            this.TransparencyKey = colorTransparencyKey; //set tranparency key
         }
 
         /// <summary>
@@ -53,17 +58,11 @@ namespace AssaultCubeHack {
             }
         }
 
-        public void ClearScreen() {
-            //fill screen with chosen transparent color
-            graphics.FillRectangle(new SolidBrush(colorTransparencyKey), new Rectangle(0,0,this.Width, this.Height));
-        }
 
         private void AssaultHack_Load(object sender, EventArgs e) {
             //initialize graphics
             graphics = picBoxOverlay.CreateGraphics();
 
-            //taget process
-            Process process;
 
             //try to find game
             if (Memory.GetProcessesByName("ac_client", out process)) {
@@ -90,16 +89,74 @@ namespace AssaultCubeHack {
             }
            
 
-            //start thread for playing with memory
-            Thread t = new Thread(UpdateHack);
-            t.IsBackground = false;
-            t.Start();
+            //start thread for playing with memory and drawing overlay
+            Thread overlayThread = new Thread(UpdateHack);
+            overlayThread.IsBackground = false;
+            overlayThread.Start();
 
+            //start thread for positionint and sizing overlay on top of target process
+            Thread windowPosThread = new Thread(UpdateWindow);
+            windowPosThread.IsBackground = false;
+            windowPosThread.Start(this.Handle);
+            
 
             //set up keyboard hooking
             gkh.HookedKeys.Add(keyAim);
             gkh.KeyDown += new KeyEventHandler(KeyDownEvent);
             gkh.KeyUp += new KeyEventHandler(KeyUpEvent);
+        }
+
+        /// <summary>
+        /// Thread to make sure overlay is on top of target process.
+        /// </summary>
+        /// <param name="handle">Handle of overlay form</param>
+        private void UpdateWindow(object handle) {
+            while (true) {
+                SetOverlayPosition((IntPtr)handle);
+                Thread.Sleep(1000);
+            }
+        }
+
+        /// <summary>
+        /// Set overlay on top of target process.
+        /// </summary>
+        /// <param name="handle">Handle of overlay form</param>
+        private void SetOverlayPosition(IntPtr handle) {
+            
+            //get window handle
+            IntPtr targetHandle = Managed.FindWindow(null, process.MainWindowTitle);
+            if (targetHandle == IntPtr.Zero)
+                return;
+
+            //get position and size of window
+            RECT targetWindowPosition, targetWindowSize;
+            Managed.GetWindowRect(targetHandle, out targetWindowPosition);
+            Managed.GetClientRect(targetHandle, out targetWindowSize);          
+
+            //calculate width and height of full target window
+            int width = targetWindowPosition.Right - targetWindowPosition.Left;
+            int height = targetWindowPosition.Bottom - targetWindowPosition.Top;
+
+            //check if window has borders
+            int dwStyle = Managed.GetWindowLong(targetHandle, Managed.GWL_STYLE);
+            if ((dwStyle & Managed.WS_BORDER) != 0) {
+                //calculate inner window size without borders      
+                int bWidth = targetWindowPosition.Right - targetWindowPosition.Left;
+                int bHeight = targetWindowPosition.Bottom - targetWindowPosition.Top;
+
+                width = targetWindowSize.Right - targetWindowSize.Left;
+                height = targetWindowSize.Bottom - targetWindowSize.Top;            
+
+                int borderWidth = (bWidth - targetWindowSize.Right) / 2;
+                int borderHeight = (bHeight - targetWindowSize.Bottom);               
+                borderHeight -= borderWidth; //remove bottom
+
+                targetWindowPosition.Left += borderWidth;
+                targetWindowPosition.Top += borderHeight;
+            }
+            
+            //move and resize self window to match target window
+            Managed.MoveWindow(handle, targetWindowPosition.Left, targetWindowPosition.Top, width, height, true);
         }
 
         /// <summary>
@@ -190,6 +247,12 @@ namespace AssaultCubeHack {
 
                 Thread.Sleep(0);
             }
-        }      
+        }
+
+        public void ClearScreen() {
+            //fill screen with chosen transparent color
+            graphics.FillRectangle(new SolidBrush(colorTransparencyKey), new Rectangle(0, 0, this.Width, this.Height));
+        }
+
     }
 }
