@@ -48,9 +48,13 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
+  <PropertyGroup>
+    <StartupObject />
+  </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -60,7 +64,12 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="AssaultHack.cs" />
+    <Compile Include="AssaultHack.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="AssaultHack.Designer.cs">
+      <DependentUpon>AssaultHack.cs</DependentUpon>
+    </Compile>
     <Compile Include="GlobalKeyboardHook.cs" />
     <Compile Include="Matrix.cs" />
     <Compile Include="Offsets.cs" />
@@ -86,6 +95,11 @@
       <ProductName>.NET Framework 3.5 SP1</ProductName>
       <Install>false</Install>
     </BootstrapperPackage>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="AssaultHack.resx">
+      <DependentUpon>AssaultHack.cs</DependentUpon>
+    </EmbeddedResource>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

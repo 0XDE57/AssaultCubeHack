@@ -9,26 +9,14 @@ using Utilities;
 namespace AssaultCubeHack {
 
     class Program {
-
+        /// <summary>
+        /// The main entry point for the application.
+        /// </summary>
+        [STAThread]
         static void Main(string[] args) {
-            //taget process
-            Process process;
-
-            //try to find game
-            if (Memory.GetProcessesByName("ac_client", out process)) {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Process found: " + process.Id + ": " + process.ProcessName);
-                new AssaultHack(process);
-            } else {
-                Console.WriteLine("Process not found.");
-            }
-            Console.ForegroundColor = ConsoleColor.White;
-            Console.WriteLine("Press any key to exit.");
-            Console.ReadKey(true);
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new AssaultHack());       
         }
-
-
-    }
-
-   
+    }   
 }
