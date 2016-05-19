@@ -51,6 +51,7 @@
             this.TopMost = true;
             this.TransparencyKey = System.Drawing.Color.Black;
             this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
+            this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.AssaultHack_FormClosing);
             this.Load += new System.EventHandler(this.AssaultHack_Load);
             ((System.ComponentModel.ISupportInitialize)(this.picBoxOverlay)).EndInit();
             this.ResumeLayout(false);

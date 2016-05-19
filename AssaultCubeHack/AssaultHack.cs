@@ -24,6 +24,11 @@ namespace AssaultCubeHack {
         //color used for transparency. anything drawn in same color will not show up.
         Color colorTransparencyKey = Color.Black;
 
+        //threads for updating rendering
+        private Thread overlayThread;
+        private Thread windowPosThread;
+        private volatile bool isRunning = false;
+
         //game objects
         Player self;
         List<Player> players = new List<Player>();
@@ -35,7 +40,8 @@ namespace AssaultCubeHack {
 
         public AssaultHack() {         
             InitializeComponent();
-         
+            
+            //set up window and overlay properties for drawing on top of another process
             this.WindowState = FormWindowState.Maximized; //maximize window
             this.TopMost = true; //set window on top of all others
             this.FormBorderStyle = FormBorderStyle.None; //remove form controls
@@ -87,15 +93,18 @@ namespace AssaultCubeHack {
                 Console.ReadKey(true);
                 return;
             }
-           
+
+
+            //start thread flag
+            isRunning = true;
 
             //start thread for playing with memory and drawing overlay
-            Thread overlayThread = new Thread(UpdateHack);
+            overlayThread = new Thread(UpdateHack);
             overlayThread.IsBackground = false;
             overlayThread.Start();
 
-            //start thread for positionint and sizing overlay on top of target process
-            Thread windowPosThread = new Thread(UpdateWindow);
+            //start thread for positioning and sizing overlay on top of target process
+            windowPosThread = new Thread(UpdateWindow);
             windowPosThread.IsBackground = false;
             windowPosThread.Start(this.Handle);
             
@@ -108,13 +117,21 @@ namespace AssaultCubeHack {
 
         /// <summary>
         /// Thread to make sure overlay is on top of target process.
+        /// Checks to make sure process is still running.
+        /// If process has ended, kills program.
         /// </summary>
         /// <param name="handle">Handle of overlay form</param>
         private void UpdateWindow(object handle) {
-            while (true) {
+            while (isRunning) {
+                isRunning = Memory.IsProcessRunning(process);
+
                 SetOverlayPosition((IntPtr)handle);
                 Thread.Sleep(1000);
             }
+
+            //detach from process
+            Memory.CloseProcess();
+            Environment.Exit(0);
         }
 
         /// <summary>
@@ -165,7 +182,7 @@ namespace AssaultCubeHack {
         private void KeyDownEvent(object sender, KeyEventArgs e) {
             aim = (e.KeyCode == keyAim);
 
-            //e.Handled = true;//prevent other programs from processing key
+            e.Handled = true;//prevent other programs from processing key
         }
 
         /// <summary>
@@ -176,40 +193,26 @@ namespace AssaultCubeHack {
                 aim = false;
             }
 
-            //e.Handled = true;//prevent other programs from processing key
+            e.Handled = true;//prevent other programs from processing key
         }
 
 
         public void UpdateHack() {
 
             //update loop
-            while (true) {
-                //test graphics
-                graphics.DrawString("Working!!!", new Font("Comic Sans MS", 20), Brushes.Blue, 20, 20);
-                graphics.DrawEllipse(Pens.Red, this.Width / 2 - 50, this.Height / 2 - 50, 100, 100);
-                graphics.DrawLine(Pens.Green, 0, 0, this.Width, this.Height);
-                graphics.DrawLine(Pens.Green, 0, this.Height, this.Width, 0);
+            while (isRunning) {
 
-                //read self
-                int pointerPlayerSelf = Memory.Read<int>(Offsets.baseGame + Offsets.playerEntity);
-                self = new Player(pointerPlayerSelf);
-
-                //read players
-                players.Clear();
-                int numPlayers = Memory.Read<int>(Offsets.baseGame + Offsets.numplayers);
-                int pointerPlayerArray = Memory.Read<int>(Offsets.baseGame + Offsets.playerArray);
-                for (int i = 0; i < numPlayers - 1; i++) {
-                    int pointerPlayer = Memory.Read<int>(pointerPlayerArray + (i + 1) * 0x4);
-                    Player player = new Player(pointerPlayer);
-                    players.Add(player);
-                }
+                //read
+                ReadGameMemory();
 
 
                 //Test Hacks
                 //self hacks, infinite health and ammo
-                self.Health += 1;
-                self.Ammo = 7331;
-                self.AmmoClip = 999;
+                self.Health = 99999;
+                self.weapon.Ammo = 7331;
+                self.weapon.AmmoClip = 999;
+                self.weapon.DelayTime = 0;//rapid fire
+
                 //players.ForEach(p => p.Velocity = new Vector3(0, 0, 15));//send everyone to the ceiling
                 //players.ForEach(p => p.Pitch = 90); //make everyone look up
                 //players.ForEach(p => p.Position = new Vector3(130, 130, 10)); //set everyone to same spot
@@ -229,6 +232,7 @@ namespace AssaultCubeHack {
                                 target = player;
                         }
 
+
                         //calculate horizontal angle between enemy and player (yaw)
                         float dx = target.Position.X - self.Position.X;
                         float dy = target.Position.Y - self.Position.Y;
@@ -245,7 +249,39 @@ namespace AssaultCubeHack {
                     }
                 }
 
+
+                //rendering
+                ClearScreen();
+
+                //test draw player list
+                Font font = new Font(FontFamily.GenericMonospace, 15);
+                int spacing = 15;
+                int s = 0;
+                //graphics.FillRectangle(new SolidBrush(Color.FromArgb(200, 1, 0, 0)), 20, 20, 150, spacing * players.Count);
+                foreach (Player p in players) {
+                    graphics.DrawString(p.Name, font, p.Team == self.Team ? Brushes.Green : Brushes.Red, 20, 20 + (s * spacing));
+                    s++;
+                }
+
                 Thread.Sleep(0);
+            }
+        }
+
+        private void ReadGameMemory() {
+            //read self
+            int ptrPlayerSelf = Memory.Read<int>(Offsets.baseGame + Offsets.ptrPlayerEntity);
+            self = new Player(ptrPlayerSelf);
+
+            //read players
+            players.Clear();
+            int numPlayers = Memory.Read<int>(Offsets.baseGame + Offsets.numplayers);
+            int ptrPlayerArray = Memory.Read<int>(Offsets.baseGame + Offsets.ptrPlayerArray);
+            for (int i = 0; i < numPlayers - 1; i++) {
+                //due to the game's implimentation we ignore the first 4 bytes from the start of the array 
+                //each pointer is 4 bytes in the array. pointer + (i + 1) * 0x04
+                int ptrPlayer = Memory.Read<int>(ptrPlayerArray + (i + 1) * 0x04);
+                Player player = new Player(ptrPlayer);
+                players.Add(player);
             }
         }
 
@@ -254,5 +290,12 @@ namespace AssaultCubeHack {
             graphics.FillRectangle(new SolidBrush(colorTransparencyKey), new Rectangle(0, 0, this.Width, this.Height));
         }
 
+        private void AssaultHack_FormClosing(object sender, FormClosingEventArgs e) {
+            //kill threads
+            isRunning = false;
+
+            //detach from process
+            Memory.CloseProcess();
+        }
     }
 }

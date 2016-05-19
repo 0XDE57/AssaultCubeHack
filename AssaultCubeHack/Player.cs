@@ -8,77 +8,68 @@ namespace AssaultCubeHack {
     class Player {
         private int pointerPlayer;
 
-        private string name;
-        private Vector3 position,velocity;
-        private float yaw, pitch, roll;
-        private int health, healthMax;
-        private int ammo, ammoClip;
-        private int team;
+        public string Name { get { return Memory.ReadString2(pointerPlayer + Offsets.name, 17).Remove(0, 1); } }
 
-        public string Name { get { return name; } }
-
-        public int Team { get { return team; } }
+        public int Team { get { return Memory.Read<int>(pointerPlayer + Offsets.team); } }
 
         public int Health {
-            get { return health; }
+            get { return Memory.Read<int>(pointerPlayer + Offsets.health); }
             set { Memory.Write<int>(pointerPlayer + Offsets.health, value); }
         }
 
         public Vector3 Position {
-            get { return position; }
+            get { return Memory.ReadVector3(pointerPlayer + Offsets.position); }
             set { Memory.WriteVector3(pointerPlayer + Offsets.position, value); }
         }
 
         public Vector3 Velocity {
-            get { return velocity; }
+            get { return Memory.ReadVector3(pointerPlayer + Offsets.velocity); }
             set { Memory.WriteVector3(pointerPlayer + Offsets.velocity, value); }
         }
 
         public float Yaw {
-            get { return yaw; }
+            get { return Memory.Read<float>(pointerPlayer + Offsets.yaw); }
             set { Memory.Write<float>(pointerPlayer + Offsets.yaw, value); }
         }
 
         public float Pitch {
-            get { return pitch; }
+            get { return Memory.Read<float>(pointerPlayer + Offsets.pitch); }
             set { Memory.Write<float>(pointerPlayer + Offsets.pitch, value); }
         }
 
-        public int Ammo {
-            get { return ammo; }
-            set {
-                Int32 pa1 = Memory.Read<Int32>(pointerPlayer + Offsets.a1);
-                Int32 pa2 = Memory.Read<Int32>(pa1 + Offsets.a2);
-                Memory.Write<int>(pa2 + Offsets.ammo, value);
-            }
-        }
-
-        public int AmmoClip {
-            get { return ammoClip; }
-            set {
-                Int32 pa1 = Memory.Read<Int32>(pointerPlayer + Offsets.a1);
-                Int32 pa2 = Memory.Read<Int32>(pa1 + Offsets.a2);
-                Memory.Write<int>(pa2 + Offsets.ammoClip, value);
-            }
-        }
-
-
+        public Weapon weapon;
 
         public Player(int pointerPlayer) {
             this.pointerPlayer = pointerPlayer;
+            weapon = new Weapon(pointerPlayer);
+        }
+    }
 
-            name = Memory.ReadString2(pointerPlayer + Offsets.name, 17).Remove(0, 1);
-            team = Memory.Read<int>(pointerPlayer + Offsets.team);
-            health = Memory.Read<int>(pointerPlayer + Offsets.health);
-            position = Memory.ReadVector3(pointerPlayer + Offsets.position);
-            velocity = Memory.ReadVector3(pointerPlayer + Offsets.velocity);
-            yaw = Memory.Read<float>(pointerPlayer + Offsets.yaw);
-            pitch = Memory.Read<float>(pointerPlayer + Offsets.pitch);
+    /// <summary>
+    /// Weapon object that player is holding.
+    /// </summary>
+    class Weapon {
 
-            Int32 pa1 = Memory.Read<Int32>(pointerPlayer + Offsets.a1);
-            Int32 pa2 = Memory.Read<Int32>(pa1 + Offsets.a2);
-            ammo = Memory.Read<int>(pa2 + Offsets.ammo);
-            ammoClip = Memory.Read<int>(pa2 + Offsets.ammoClip);
+        private int pointerWeapon;
+
+        public int Ammo {
+            get { return Memory.Read<int>(pointerWeapon + Offsets.ammo); }
+            set { Memory.Write<int>(pointerWeapon + Offsets.ammo, value); }
+        }
+
+        public int AmmoClip {
+            get { return Memory.Read<int>(pointerWeapon + Offsets.ammoClip); }
+            set { Memory.Write<int>(pointerWeapon + Offsets.ammoClip, value); }
+        }
+
+        public int DelayTime {
+            get { return Memory.Read<int>(pointerWeapon + Offsets.delayTime); }
+            set { Memory.Write<int>(pointerWeapon + Offsets.delayTime, value); }
+        }
+
+        public Weapon(int pointerPlayer) {
+            int pointerCurrentWeapon = Memory.Read<Int32>(pointerPlayer + Offsets.ptrCurrentWeapon);
+            pointerWeapon = Memory.Read<Int32>(pointerCurrentWeapon + Offsets.ptrWeapon);
         }
     }
 }

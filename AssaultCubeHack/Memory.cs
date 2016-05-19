@@ -83,6 +83,14 @@ namespace AssaultCubeHack {
             return process != null;
         }
 
+        public static bool IsProcessRunning(Process process) {
+            foreach (Process p in Process.GetProcesses()) {
+                if (p.ProcessName == process.ProcessName)
+                    return true;
+            }
+            return false;
+        }
+
         private static IntPtr handle = IntPtr.Zero;
 
         public static IntPtr OpenProcess(int pId) {
@@ -132,36 +140,6 @@ namespace AssaultCubeHack {
 
             return data;
         }
-
-        /*
-        public static Int64 ReadInt64(Int64 baseAddress) {
-            byte[] buffer = new byte[8];
-            IntPtr byteRead;
-            Managed.ReadProcessMemory(handle, baseAddress, buffer, 8, out byteRead);
-            return BitConverter.ToInt64(buffer, 0);
-        }
-
-        public static Int32 ReadInt32(Int64 baseAddress) {
-            byte[] buffer = new byte[4];
-            IntPtr byteRead;
-            Managed.ReadProcessMemory(handle, baseAddress, buffer, 4, out byteRead);
-            return BitConverter.ToInt32(buffer, 0);
-        }
-
-        public static float ReadFloat(Int64 baseAddress) {
-            byte[] buffer = new byte[sizeof(float)];
-            IntPtr byteRead;
-            Managed.ReadProcessMemory(handle, baseAddress, buffer, sizeof(float), out byteRead);
-            return BitConverter.ToSingle(buffer, 0);
-        }
-
-        public static byte ReadByte(Int64 baseAddress) {
-            byte[] buffer = new byte[sizeof(byte)];
-            IntPtr byteRead;
-            Managed.ReadProcessMemory(handle, baseAddress, buffer, sizeof(byte), out byteRead);
-            return buffer[0];
-        }
-        */
 
         public static string ReadString(Int64 baseAddress, UInt64 size) {
             byte[] buffer = new byte[size];
