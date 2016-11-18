@@ -19,8 +19,10 @@ namespace AssaultCubeHack {
         const string processName = "ac_client";
         private Process process;
 
-        //graphics to draw on screen
-        Graphics graphics;        
+        //initialize rendering stuff
+        BufferedGraphics bufferedGraphics;
+        BufferedGraphicsContext buffContext = new BufferedGraphicsContext();
+        Font font = new Font(FontFamily.GenericMonospace, 15, FontStyle.Bold);
         //color used for transparency. anything drawn in same color will not show up.
         Color colorTransparencyKey = Color.Black;
 
@@ -38,9 +40,9 @@ namespace AssaultCubeHack {
         const Keys keyAim = Keys.CapsLock;
         bool aim = false;
 
-        public AssaultHack() {         
+        public AssaultHack() {
             InitializeComponent();
-            
+
             //set up window and overlay properties for drawing on top of another process
             this.WindowState = FormWindowState.Maximized; //maximize window
             this.TopMost = true; //set window on top of all others
@@ -67,13 +69,12 @@ namespace AssaultCubeHack {
 
         private void AssaultHack_Load(object sender, EventArgs e) {
             //initialize graphics
-            graphics = picBoxOverlay.CreateGraphics();
-
+            bufferedGraphics = buffContext.Allocate(picBoxOverlay.CreateGraphics(), ClientRectangle);
 
             //try to find game
             if (Memory.GetProcessesByName("ac_client", out process)) {
                 Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("Process found: " + process.Id + ": " + process.ProcessName);       
+                Console.WriteLine("Process found: " + process.Id + ": " + process.ProcessName);
                 Console.ForegroundColor = ConsoleColor.White;
                 Console.WriteLine("Attaching...");
 
@@ -107,7 +108,7 @@ namespace AssaultCubeHack {
             windowPosThread = new Thread(UpdateWindow);
             windowPosThread.IsBackground = false;
             windowPosThread.Start(this.Handle);
-            
+
 
             //set up keyboard hooking
             gkh.HookedKeys.Add(keyAim);
@@ -116,9 +117,8 @@ namespace AssaultCubeHack {
         }
 
         /// <summary>
-        /// Thread to make sure overlay is on top of target process.
+        /// Thread to make sure overlay is positioned over target process.
         /// Checks to make sure process is still running.
-        /// If process has ended, kills program.
         /// </summary>
         /// <param name="handle">Handle of overlay form</param>
         private void UpdateWindow(object handle) {
@@ -129,17 +129,15 @@ namespace AssaultCubeHack {
                 Thread.Sleep(1000);
             }
 
-            //detach from process
-            Memory.CloseProcess();
-            Environment.Exit(0);
+
         }
 
         /// <summary>
-        /// Set overlay on top of target process.
+        /// Set window position and size to overlay target process.
         /// </summary>
-        /// <param name="handle">Handle of overlay form</param>
+        /// <param name="handle">Handle of overlay form(this form/self)</param>
         private void SetOverlayPosition(IntPtr handle) {
-            
+
             //get window handle
             IntPtr targetHandle = Managed.FindWindow(null, process.MainWindowTitle);
             if (targetHandle == IntPtr.Zero)
@@ -148,7 +146,7 @@ namespace AssaultCubeHack {
             //get position and size of window
             RECT targetWindowPosition, targetWindowSize;
             Managed.GetWindowRect(targetHandle, out targetWindowPosition);
-            Managed.GetClientRect(targetHandle, out targetWindowSize);          
+            Managed.GetClientRect(targetHandle, out targetWindowSize);
 
             //calculate width and height of full target window
             int width = targetWindowPosition.Right - targetWindowPosition.Left;
@@ -162,16 +160,16 @@ namespace AssaultCubeHack {
                 int bHeight = targetWindowPosition.Bottom - targetWindowPosition.Top;
 
                 width = targetWindowSize.Right - targetWindowSize.Left;
-                height = targetWindowSize.Bottom - targetWindowSize.Top;            
+                height = targetWindowSize.Bottom - targetWindowSize.Top;
 
                 int borderWidth = (bWidth - targetWindowSize.Right) / 2;
-                int borderHeight = (bHeight - targetWindowSize.Bottom);               
+                int borderHeight = (bHeight - targetWindowSize.Bottom);
                 borderHeight -= borderWidth; //remove bottom
 
                 targetWindowPosition.Left += borderWidth;
                 targetWindowPosition.Top += borderHeight;
             }
-            
+
             //move and resize self window to match target window
             Managed.MoveWindow(handle, targetWindowPosition.Left, targetWindowPosition.Top, width, height, true);
         }
@@ -208,63 +206,81 @@ namespace AssaultCubeHack {
 
                 //Test Hacks
                 //self hacks, infinite health and ammo
+                /*
                 self.Health = 99999;
                 self.weapon.Ammo = 7331;
                 self.weapon.AmmoClip = 999;
-                self.weapon.DelayTime = 0;//rapid fire
+                self.weapon.DelayTime = 0;//rapid fire*/
 
                 //players.ForEach(p => p.Velocity = new Vector3(0, 0, 15));//send everyone to the ceiling
                 //players.ForEach(p => p.Pitch = 90); //make everyone look up
                 //players.ForEach(p => p.Position = new Vector3(130, 130, 10)); //set everyone to same spot
                 //players.ForEach(p => p.Health = 0);//1 hit kills on anyone
 
-
                 //aimbot
-                if (aim) {
-                    if (players.Count > 0) {
-                        //find closest enemy player
-                        Player target = players.Find(p => p.Team != self.Team && p.Health > 0);
-                        if (target == null) {
-                            target = players[0];
-                        }
-                        foreach (Player player in players) {
-                            if (player.Team != self.Team && player.Health > 0 && player.Position.Distance(self.Position) < target.Position.Distance(self.Position))
-                                target = player;
-                        }
+                UpdateAimbot();
+
+                //draw
+                Draw(bufferedGraphics.Graphics);
 
 
-                        //calculate horizontal angle between enemy and player (yaw)
-                        float dx = target.Position.X - self.Position.X;
-                        float dy = target.Position.Y - self.Position.Y;
-                        double angleYaw = Math.Atan2(dy, dx) * 180 / Math.PI;
-
-                        //calculate verticle angle between enemy and player (pitch)
-                        double distance = Math.Sqrt(dx * dx + dy * dy);
-                        float dz = target.Position.Z - self.Position.Z;
-                        double anglePitch = Math.Atan2(dz, distance) * 180 / Math.PI;
-
-                        //set self angles to calculated angles
-                        self.Yaw = (float)angleYaw + 90;
-                        self.Pitch = (float)anglePitch;
-                    }
-                }
-
-
-                //rendering
-                ClearScreen();
-
-                //test draw player list
-                Font font = new Font(FontFamily.GenericMonospace, 15);
-                int spacing = 15;
-                int s = 0;
-                //graphics.FillRectangle(new SolidBrush(Color.FromArgb(200, 1, 0, 0)), 20, 20, 150, spacing * players.Count);
-                foreach (Player p in players) {
-                    graphics.DrawString(p.Name, font, p.Team == self.Team ? Brushes.Green : Brushes.Red, 20, 20 + (s * spacing));
-                    s++;
-                }
-
-                Thread.Sleep(0);
+                Thread.Sleep(1);
             }
+        }
+
+        private void UpdateAimbot() {
+            //if not aiming or no players, escape
+            if (!aim || players.Count == 0) return;
+
+            //find closest enemy player
+            Player target = GetClosestEnemy();
+            if (target == null) return;
+
+            //calculate horizontal angle between enemy and player (yaw)
+            float dx = target.Position.X - self.Position.X;
+            float dy = target.Position.Y - self.Position.Y;
+            double angleYaw = Math.Atan2(dy, dx) * 180 / Math.PI;
+
+            //calculate verticle angle between enemy and player (pitch)
+            double distance = Math.Sqrt(dx * dx + dy * dy);
+            float dz = target.Position.Z - self.Position.Z;
+            double anglePitch = Math.Atan2(dz, distance) * 180 / Math.PI;
+
+            //set self angles to calculated angles
+            self.Yaw = (float)angleYaw + 90;
+            self.Pitch = (float)anglePitch;
+
+        }
+
+        private Player GetClosestEnemy() {           
+            Player target = players.Find(p => p.Team != self.Team && p.Health > 0);
+            if (target == null) return null;
+
+            foreach (Player player in players) {
+                if (player.Team != self.Team && player.Health > 0 && player.Position.Distance(self.Position) < target.Position.Distance(self.Position))
+                    target = player;
+            }
+
+            return target;
+        }
+
+        private void Draw(Graphics g) {
+            //clear
+            ClearScreen(g);
+
+            //test draw player list
+            
+            int spacing = (int)font.Size + 1;
+            int s = 0;
+            //cant draw with alpha due to window transperency? (127 and below = translucent, 128 and above = opaque. no in inbetween) 
+            //g.FillRectangle(new SolidBrush(Color.FromArgb(127, 255, 0, 0)), 20, 20, 150, spacing * players.Count);
+            foreach (Player p in players) {
+                g.DrawString(p.Name, font, p.Team == self.Team ? Brushes.Green : Brushes.Red, 20, 20 + (s * spacing));
+                s++;
+            }
+
+            //render
+            bufferedGraphics.Render();
         }
 
         private void ReadGameMemory() {
@@ -285,17 +301,23 @@ namespace AssaultCubeHack {
             }
         }
 
-        public void ClearScreen() {
+        public void ClearScreen(Graphics g) {
             //fill screen with chosen transparent color
-            graphics.FillRectangle(new SolidBrush(colorTransparencyKey), new Rectangle(0, 0, this.Width, this.Height));
+            g.FillRectangle(new SolidBrush(colorTransparencyKey), new Rectangle(0, 0, this.Width, this.Height));
         }
 
         private void AssaultHack_FormClosing(object sender, FormClosingEventArgs e) {
             //kill threads
             isRunning = false;
 
+            //wait for threads to finish
+            windowPosThread.Join();
+            overlayThread.Join();
+
             //detach from process
             Memory.CloseProcess();
+
+            Environment.Exit(0);
         }
     }
 }
