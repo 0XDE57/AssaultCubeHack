@@ -4,7 +4,9 @@ namespace AssaultCubeHack {
         /** baseGame is specific address in memory that all the pointers are based off
          * A pointer is read like:  baseGame + ptrMyObject
          * A variable is read like: ptrMyObject + myVariable
-         * Pointers to locations are prefaced with ptr
+         * Pointers to locations are prefixed with ptr
+         * 
+         * Values are relative to AssaultCube version 1.2.0.2
          */
 
         //base memory address to read
@@ -15,7 +17,7 @@ namespace AssaultCubeHack {
         //ptrPlayerEnitity -> variableOffset
         public const int ptrPlayerEntity = 0x0C;
         public const int ptrPlayerArray = 0x10;
-        public const int numplayers = 0x18; //ptrPlayerArray size
+        public const int numPlayers = 0x18; //ptrPlayerArray size
         //player variables
         public const int name = 0x224;
         public const int team = 0x32C;
