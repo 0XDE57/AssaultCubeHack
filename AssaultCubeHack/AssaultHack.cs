@@ -296,17 +296,18 @@ namespace AssaultCubeHack {
             if (!aim || players.Count == 0) return;
 
             //find closest enemy player
-            Player target = GetClosestEnemy();
+            //Player target = GetClosestEnemy();
+            Player target = GetClosestEnemyToCrossHair();
             if (target == null) return;
 
             //calculate horizontal angle between enemy and player (yaw)
-            float dx = target.Position.X - self.Position.X;
-            float dy = target.Position.Y - self.Position.Y;
+            float dx = target.PositionFoot.x - self.PositionFoot.x;
+            float dy = target.PositionFoot.y - self.PositionFoot.y;
             double angleYaw = Math.Atan2(dy, dx) * 180 / Math.PI;
 
             //calculate verticle angle between enemy and player (pitch)
             double distance = Math.Sqrt(dx * dx + dy * dy);
-            float dz = target.Position.Z - self.Position.Z;
+            float dz = target.PositionFoot.z - self.PositionFoot.z;
             double anglePitch = Math.Atan2(dz, distance) * 180 / Math.PI;
 
             //set self angles to calculated angles
@@ -322,10 +323,43 @@ namespace AssaultCubeHack {
             //find first living enemy player
             Player target = players.Find(p => p.Team != self.Team && p.Health > 0);
             if (target == null) return null;
+
             //if a closer enemy is found, set them as target
             foreach (Player player in players) {
-                if (player.Team != self.Team && player.Health > 0 && player.Position.Distance(self.Position) < target.Position.Distance(self.Position))
+                if (player.Team != self.Team && player.Health > 0 
+                    && player.PositionFoot.Distance(self.PositionFoot) < target.PositionFoot.Distance(self.PositionFoot))
                     target = player;
+            }
+
+            return target;
+        }
+
+        /// <summary>
+        /// Get enemy nearest to crosshair.
+        /// </summary>
+        private Player GetClosestEnemyToCrossHair() {
+            //find first living enemy player in view
+            Vector2 targetPos = new Vector2();
+            Player target = players.Find(p => p.Team != self.Team && p.Health > 0 
+            && viewMatrix.WorldToScreen(p.PositionHead, gameWidth, gameHeight, out targetPos));
+            if (target == null) return null;
+
+            //calculate distance to crosshair
+            Vector2 crossHair = new Vector2(gameWidth / 2, gameHeight / 2);
+            float dist = (float)crossHair.Distance(targetPos);
+
+            //find player closest to crosshair
+            foreach (Player p in players) {
+                if (p.Team != self.Team && p.Health > 0) {
+                    Vector2 headPos;
+                    if (viewMatrix.WorldToScreen(p.PositionHead, gameWidth, gameHeight, out headPos)) {
+                        float newDist = (float)crossHair.Distance(headPos);
+                        if (newDist < dist) {
+                            target = p;
+                            dist = newDist;
+                        }
+                    }
+                }
             }
 
             return target;
@@ -345,11 +379,10 @@ namespace AssaultCubeHack {
             players.Clear();
             numPlayers = Memory.Read<int>(Offsets.baseGame + Offsets.numPlayers);
             int ptrPlayerArray = Memory.Read<int>(Offsets.baseGame + Offsets.ptrPlayerArray);
-            for (int i = 0; i < numPlayers - 1; i++) {
-                //due to the game's implimentation we ignore the first 4 bytes from the start of the array
+            for (int i = 1; i < numPlayers; i++) {
                 //each pointer is 4 bytes apart in the array
                 //pointer to player = pointer to array + index of player * byte size
-                int ptrPlayer = Memory.Read<int>(ptrPlayerArray + (i + 1) * 0x04);
+                int ptrPlayer = Memory.Read<int>(ptrPlayerArray + (i * 0x04));
                 players.Add(new Player(ptrPlayer));
             }
 
@@ -366,15 +399,22 @@ namespace AssaultCubeHack {
             g.DrawString("Players: " + numPlayers, font, new SolidBrush(Color.Wheat), ClientSize.Width / 2, 10);
             
             //debug show view matrix
-            g.DrawString(viewMatrix.ToString(), font, Brushes.White, new Point(300, 30));
-            g.DrawString(gameWidth + "," + gameHeight, font, Brushes.White, new Point());
+            //g.DrawString(viewMatrix.ToString(), font, Brushes.White, new Point(300, 30));
+            //g.DrawString(gameWidth + "," + gameHeight, font, Brushes.White, new Point());
             
-            //test esp
+            //draw esp(wall hack)
             foreach (Player p in players) {
+                if (p.Health <= 0) continue;
+
                 Pen color = p.Team == self.Team ? Pens.Green : Pens.Red;
-                Vector2 screenPos;
-                if(viewMatrix.WorldToScreen(p.Position, gameWidth, gameHeight, out screenPos))
-                    g.DrawEllipse(color, screenPos.X-5, screenPos.Y-5, 10, 10);
+                Vector2 headPos, footPos;
+                if(viewMatrix.WorldToScreen(p.PositionHead, gameWidth, gameHeight, out headPos) &&
+                    viewMatrix.WorldToScreen(p.PositionFoot, gameWidth, gameHeight, out footPos)) {
+                    float height = Math.Abs(headPos.y - footPos.y);
+                    float width = height / 2;
+                    g.DrawRectangle(color, headPos.x-width/2, headPos.y, width, height);
+                }
+                    
             }
 
 
@@ -385,10 +425,13 @@ namespace AssaultCubeHack {
                 //add background to make text more visible
                 g.FillRectangle(hatchBrush, 20, 20, 180, (spacing * players.Count) + (spacing / 2));
                 foreach (Player p in players) {
+
                     Point pos = new Point(20, 20 + (s * spacing));
                     Brush color = p.Team == self.Team ? Brushes.Green : Brushes.Red;
                     DrawStringOutlined(g, p.Name, pos, font, color, Pens.DarkBlue);
                     //g.DrawString(p.Name, font, color, pos.X, pos.Y);
+                    //g.DrawOutline();
+                    //DrawOutline(g)
                     s++;
                 }
             }
@@ -397,12 +440,10 @@ namespace AssaultCubeHack {
             bufferedGraphics.Render();
         }
 
-
-
         private static void DrawStringOutlined(Graphics g, string text, Point pos, Font font, Brush colorText, Pen colorOutline) {
             GraphicsPath path = new GraphicsPath();
             path.AddString(text,
-                font.FontFamily, (int)font.Style, 
+                font.FontFamily, (int)font.Style,
                 g.DpiY * font.Size / 72, // convert to em size
                 pos, new StringFormat());
             g.DrawPath(colorOutline, path);

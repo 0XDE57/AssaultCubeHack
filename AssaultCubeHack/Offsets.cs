@@ -22,7 +22,8 @@ namespace AssaultCubeHack {
         //player variables
         public const int name = 0x0224;
         public const int team = 0x032C;
-        public const int position = 0x34;
+        public const int headPos = 0x04;
+        public const int footPos = 0x34;
         public const int velocity = 0x10;
         public const int yaw = 0x40;
         public const int pitch = 0x44;

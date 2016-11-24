@@ -212,9 +212,9 @@ namespace AssaultCubeHack {
 
             //convert bytes to floats
             Vector3 tmp = new Vector3();
-            tmp.X = BitConverter.ToSingle(buffer, (0 * 4));
-            tmp.Y = BitConverter.ToSingle(buffer, (1 * 4));
-            tmp.Z = BitConverter.ToSingle(buffer, (2 * 4));
+            tmp.x = BitConverter.ToSingle(buffer, (0 * 4));
+            tmp.y = BitConverter.ToSingle(buffer, (1 * 4));
+            tmp.z = BitConverter.ToSingle(buffer, (2 * 4));
             return tmp;
         }
 
@@ -222,9 +222,9 @@ namespace AssaultCubeHack {
         /// Write 3 floats in vector(x,y,z) consecutively into memory at address
         /// </summary>
         public static void WriteVector3(Int64 baseAddress, Vector3 vec) {
-            Write<float>(baseAddress + 0, vec.X); //x
-            Write<float>(baseAddress + 4, vec.Y); //y
-            Write<float>(baseAddress + 8, vec.Z); //z
+            Write<float>(baseAddress + 0, vec.x); //x
+            Write<float>(baseAddress + 4, vec.y); //y
+            Write<float>(baseAddress + 8, vec.z); //z
         }
 
         /// <summary>

@@ -28,9 +28,9 @@ namespace AssaultCubeHack {
         public bool WorldToScreen(Vector3 worldPos, int width, int height, out Vector2 screenPos) {
 
             //multiply vector against matrix
-            float screenX = (m11 * worldPos.X) + (m21 * worldPos.Y) + (m31 * worldPos.Z) + m41;
-            float screenY = (m12 * worldPos.X) + (m22 * worldPos.Y) + (m32 * worldPos.Z) + m42;
-            float screenW = (m14 * worldPos.X) + (m24 * worldPos.Y) + (m34 * worldPos.Z) + m44;
+            float screenX = (m11 * worldPos.x) + (m21 * worldPos.y) + (m31 * worldPos.z) + m41;
+            float screenY = (m12 * worldPos.x) + (m22 * worldPos.y) + (m32 * worldPos.z) + m42;
+            float screenW = (m14 * worldPos.x) + (m24 * worldPos.y) + (m34 * worldPos.z) + m44;
 
             //camera position (eye level/middle of screen)
             float camX = width / 2f;

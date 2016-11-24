@@ -17,9 +17,14 @@ namespace AssaultCubeHack {
             set { Memory.Write<int>(pointerPlayer + Offsets.health, value); }
         }
 
-        public Vector3 Position {
-            get { return Memory.ReadVector3(pointerPlayer + Offsets.position); }
-            set { Memory.WriteVector3(pointerPlayer + Offsets.position, value); }
+        public Vector3 PositionHead {
+            get { return Memory.ReadVector3(pointerPlayer + Offsets.headPos); }
+            set { Memory.WriteVector3(pointerPlayer + Offsets.headPos, value); }
+        }
+
+        public Vector3 PositionFoot {
+            get { return Memory.ReadVector3(pointerPlayer + Offsets.footPos); }
+            set { Memory.WriteVector3(pointerPlayer + Offsets.footPos, value); }
         }
 
         public Vector3 Velocity {
