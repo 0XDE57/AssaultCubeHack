@@ -7,7 +7,13 @@ using System.Runtime.InteropServices;
 using System.Diagnostics;
 
 namespace AssaultCubeHack {
-    class Managed {
+
+    /// <summary>
+    /// PInvoke (Platform Invoke) Signatures for calls to external Win32 and other unmanaged APIs from managed code.
+    /// http://www.pinvoke.net
+    /// http://winapi.freetechsecrets.com/
+    /// </summary>
+    class Win32API {
         // READ FLAGS
         public static uint PROCESS_VM_READ = 0x0010;
         public static uint PROCESS_VM_WRITE = 0x0020;
@@ -21,9 +27,26 @@ namespace AssaultCubeHack {
         // KEYS
         public const int KEY_PRESSED = 0x8000;
 
+        //user32 imports
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);      
+
+        [DllImport("user32.dll")]
+        public static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
+
+        [DllImport("user32.dll")]
+        public static extern bool MoveWindow(IntPtr handle, int x, int y, int width, int height, bool redraw);
+
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
         [DllImport("user32.dll")]
         public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
@@ -31,9 +54,14 @@ namespace AssaultCubeHack {
         [DllImport("user32.dll")]
         public static extern short GetKeyState(int KeyStates);
 
+        [DllImport("user32.dll")]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        //dwmapi imports
         [DllImport("dwmapi.dll")]
         public static extern void DwmExtendFrameIntoClientArea(IntPtr hWnd, ref int[] pMargins);
 
+        //kernal32 imports
         [DllImport("kernel32.dll")]
         public static extern IntPtr OpenProcess(UInt32 dwAccess, bool inherit, int pid);
 
@@ -48,34 +76,40 @@ namespace AssaultCubeHack {
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool VirtualProtectEx(IntPtr hProcess, IntPtr lpAddress, UInt32 dwSize, uint flNewProtect, out uint lpflOldProtect);
-
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
-
-        [DllImport("user32.dll")]
-        public static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-        [DllImport("User32.dll")]
-        public static extern bool MoveWindow(IntPtr handle, int x, int y, int width, int height, bool redraw);
-
     }
 
     [StructLayout(LayoutKind.Sequential)]
     public struct RECT {
-        public int Left;        // x position of upper-left corner
-        public int Top;         // y position of upper-left corner
-        public int Right;       // x position of lower-right corner
-        public int Bottom;      // y position of lower-right corner
+        public int Left;   // x position of upper-left corner
+        public int Top;    // y position of upper-left corner
+        public int Right;  // x position of lower-right corner
+        public int Bottom; // y position of lower-right corner
     }
 
     class Memory {
+        //handle of process we are attached to
+        private static IntPtr handle = IntPtr.Zero;
+
+        /// <summary>
+        /// Get handle to process with read and write permissions.
+        /// </summary>
+        /// <param name="pId">process ID</param>
+        /// <returns>handle</returns>
+        public static IntPtr OpenProcess(int pId) {
+            handle = Win32API.OpenProcess(Win32API.PROCESS_VM_READ | Win32API.PROCESS_VM_WRITE | Win32API.PROCESS_VM_OPERATION, false, pId);
+            return handle;
+        }
+
+        public static IntPtr GetHandle() {
+            return handle;
+        }
+
+        /// <summary>
+        /// Release / invalidate handle.
+        /// </summary>
+        public static void CloseProcess() {
+            Win32API.CloseHandle(handle);
+        }
 
         public static bool GetProcessesByName(string pName, out Process process) {
             Process[] pList = Process.GetProcessesByName(pName);
@@ -91,128 +125,140 @@ namespace AssaultCubeHack {
             return false;
         }
 
-        private static IntPtr handle = IntPtr.Zero;
-
-        public static IntPtr OpenProcess(int pId) {
-            handle = Managed.OpenProcess(Managed.PROCESS_VM_READ | Managed.PROCESS_VM_WRITE | Managed.PROCESS_VM_OPERATION, false, pId);
-            return handle;
-        }
-
-        public static IntPtr GetHandle() {
-            return handle;
-        }
-
-        public static void CloseProcess() {
-            Managed.CloseHandle(handle);
-        }
-
+        /// <summary>
+        /// Write genertic type into memory at address.
+        /// </summary>
+        /// <returns>write succeeded</returns>
         public static bool Write<T>(Int64 address, T t) {
-            Byte[] Buffer = new Byte[Marshal.SizeOf(typeof(T))];
+            //create byte array with size of type
+            Byte[] buffer = new Byte[Marshal.SizeOf(typeof(T))];
 
+            //allocate handle for buffer
             GCHandle gHandle = GCHandle.Alloc(t, GCHandleType.Pinned);
-            Marshal.Copy(gHandle.AddrOfPinnedObject(), Buffer, 0, Buffer.Length);
-            gHandle.Free();
+            //arrange data from unmanaged block of memory to structure of type T
+            Marshal.Copy(gHandle.AddrOfPinnedObject(), buffer, 0, buffer.Length);
+            gHandle.Free(); //release handle
 
+            //change access permission so we can write into memory
             uint oldProtect;
-            Managed.VirtualProtectEx(handle, (IntPtr)address, (uint)Buffer.Length, Managed.PAGE_READWRITE, out oldProtect);
+            Win32API.VirtualProtectEx(handle, (IntPtr)address, (uint)buffer.Length, Win32API.PAGE_READWRITE, out oldProtect);
+
+            //write buffer into memory
             IntPtr ptrBytesWritten;
-            return Managed.WriteProcessMemory(handle, address, Buffer, (uint)Buffer.Length, out ptrBytesWritten);
+            return Win32API.WriteProcessMemory(handle, address, buffer, (uint)buffer.Length, out ptrBytesWritten);
         }
 
         /// <summary>
-        /// Generic memory reader. Reads memory at address of process.
+        /// Reads memory of generic type at address.
         /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="address">Memoty address to access</param>
-        /// <returns>memory read from process</returns>
         public static T Read<T>(Int64 address) {
             //create byte array with size of type
             byte[] buffer = new byte[Marshal.SizeOf(typeof(T))];
 
             //read memory
-            IntPtr ByteRead;
-            Managed.ReadProcessMemory(handle, address, buffer, (uint)buffer.Length, out ByteRead);
+            IntPtr bytesRead;
+            Win32API.ReadProcessMemory(handle, address, buffer, (uint)buffer.Length, out bytesRead);
 
-            //get structure from buffer
+            //allocate handle for buffer
             GCHandle gHandle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+            //arrange data from unmanaged block of memory to structure of type T
             T data = (T)Marshal.PtrToStructure(gHandle.AddrOfPinnedObject(), typeof(T));
-            gHandle.Free();
+            gHandle.Free(); //release handle
 
             return data;
         }
 
         public static string ReadString(Int64 baseAddress, UInt64 size) {
+            //create buffer for string
             byte[] buffer = new byte[size];
+
+            //read memory into buffer
             IntPtr bytesRead;
+            Win32API.ReadProcessMemory(handle, baseAddress, buffer, size, out bytesRead);
 
-            Managed.ReadProcessMemory(handle, baseAddress, buffer, size, out bytesRead);
-
+            //encode bytes to ascii
             for (int i = 0; i < buffer.Length; i++) {
                 if (buffer[i] == 0) {
-                    byte[] _buffer = new byte[i];
-                    Buffer.BlockCopy(buffer, 0, _buffer, 0, i);
-                    return Encoding.ASCII.GetString(_buffer);
+                    byte[] tmpBuffer = new byte[i];
+                    Buffer.BlockCopy(buffer, 0, tmpBuffer, 0, i);
+                    return Encoding.ASCII.GetString(tmpBuffer);
                 }
             }
             return Encoding.ASCII.GetString(buffer);
         }
 
         public static string ReadString2(Int64 baseAddress, UInt64 size) {
+            //create buffer for string
             byte[] buffer = new byte[size];
-            IntPtr bytesRead;
 
-            Managed.ReadProcessMemory(handle, baseAddress, buffer, size, out bytesRead);
+            //read memory into buffer
+            IntPtr bytesRead;
+            Win32API.ReadProcessMemory(handle, baseAddress, buffer, size, out bytesRead);
+
+            //encode bytes to ASCII
             return Encoding.ASCII.GetString(buffer);
         }
 
-        
+        /// <summary>
+        /// Read 3 consecutive floats into x,y,z of a Vector
+        /// </summary>
         public static Vector3 ReadVector3(Int64 baseAddress) {
+            //3 floats contiguously in memory
+            byte[] buffer = new byte[3*4];
+
+            //read memory into buffer
+            IntPtr bytesRead;
+            Win32API.ReadProcessMemory(handle, baseAddress, buffer, (ulong)buffer.Length, out bytesRead);
+
+            //convert bytes to floats
             Vector3 tmp = new Vector3();
-
-            byte[] buffer = new byte[12];
-            IntPtr byteRead;
-
-            Managed.ReadProcessMemory(handle, baseAddress, buffer, 12, out byteRead);
             tmp.X = BitConverter.ToSingle(buffer, (0 * 4));
             tmp.Y = BitConverter.ToSingle(buffer, (1 * 4));
             tmp.Z = BitConverter.ToSingle(buffer, (2 * 4));
             return tmp;
         }
 
+        /// <summary>
+        /// Write 3 floats in vector(x,y,z) consecutively into memory at address
+        /// </summary>
         public static void WriteVector3(Int64 baseAddress, Vector3 vec) {
-            Write<float>(baseAddress, vec.X); //x
-            Write<float>(baseAddress + 4, vec.Y);//y
-            Write<float>(baseAddress + 8, vec.Z);//z
+            Write<float>(baseAddress + 0, vec.X); //x
+            Write<float>(baseAddress + 4, vec.Y); //y
+            Write<float>(baseAddress + 8, vec.Z); //z
         }
 
-        
+        /// <summary>
+        /// Reads 16 consecutive floats into a Matrix
+        /// </summary>
         public static Matrix ReadMatrix(Int64 baseAddress) {
+            //float matrix[16]; 16-value array laid out contiguously in memory       
+            byte[] buffer = new byte[16*4];
+
+            //read memory into buffer
+            IntPtr bytesRead;
+            Win32API.ReadProcessMemory(handle, baseAddress, buffer, (ulong)buffer.Length, out bytesRead);
+
+            //convert bytes to floats
             Matrix tmp = new Matrix();
+            tmp.m11 = BitConverter.ToSingle(buffer, (0 * 4));
+            tmp.m12 = BitConverter.ToSingle(buffer, (1 * 4));
+            tmp.m13 = BitConverter.ToSingle(buffer, (2 * 4));
+            tmp.m14 = BitConverter.ToSingle(buffer, (3 * 4));
 
-            byte[] buffer = new byte[64];
-            IntPtr byteRead;
+            tmp.m21 = BitConverter.ToSingle(buffer, (4 * 4));
+            tmp.m22 = BitConverter.ToSingle(buffer, (5 * 4));
+            tmp.m23 = BitConverter.ToSingle(buffer, (6 * 4));
+            tmp.m24 = BitConverter.ToSingle(buffer, (7 * 4));
 
-            Managed.ReadProcessMemory(handle, baseAddress, buffer, 64, out byteRead);
+            tmp.m31 = BitConverter.ToSingle(buffer, (8 * 4));
+            tmp.m32 = BitConverter.ToSingle(buffer, (9 * 4));
+            tmp.m33 = BitConverter.ToSingle(buffer, (10 * 4));
+            tmp.m34 = BitConverter.ToSingle(buffer, (11 * 4));
 
-            tmp.M11 = BitConverter.ToSingle(buffer, (0 * 4));
-            tmp.M12 = BitConverter.ToSingle(buffer, (1 * 4));
-            tmp.M13 = BitConverter.ToSingle(buffer, (2 * 4));
-            tmp.M14 = BitConverter.ToSingle(buffer, (3 * 4));
-
-            tmp.M21 = BitConverter.ToSingle(buffer, (4 * 4));
-            tmp.M22 = BitConverter.ToSingle(buffer, (5 * 4));
-            tmp.M23 = BitConverter.ToSingle(buffer, (6 * 4));
-            tmp.M24 = BitConverter.ToSingle(buffer, (7 * 4));
-
-            tmp.M31 = BitConverter.ToSingle(buffer, (8 * 4));
-            tmp.M32 = BitConverter.ToSingle(buffer, (9 * 4));
-            tmp.M33 = BitConverter.ToSingle(buffer, (10 * 4));
-            tmp.M34 = BitConverter.ToSingle(buffer, (11 * 4));
-
-            tmp.M41 = BitConverter.ToSingle(buffer, (12 * 4));
-            tmp.M42 = BitConverter.ToSingle(buffer, (13 * 4));
-            tmp.M43 = BitConverter.ToSingle(buffer, (14 * 4));
-            tmp.M44 = BitConverter.ToSingle(buffer, (15 * 4));
+            tmp.m41 = BitConverter.ToSingle(buffer, (12 * 4));
+            tmp.m42 = BitConverter.ToSingle(buffer, (13 * 4));
+            tmp.m43 = BitConverter.ToSingle(buffer, (14 * 4));
+            tmp.m44 = BitConverter.ToSingle(buffer, (15 * 4));
             return tmp;
         }       
 
