@@ -40,10 +40,11 @@ namespace AssaultCubeHack {
         private Font font = new Font(FontFamily.GenericMonospace, 14, FontStyle.Bold);
         //color used for transparency. anything drawn in same color will not show up.
         private Color colorTransparencyKey = Color.Black;
+        //TODO: fix. play with flags and window attributes...
         //can't use SolidBrush with alpha due to window transperency key / flag destroying alpha?
         //(alpha of 127 and below = translucent, 128 and above = opaque)
         //so we use HatchBrush to kinda fake alpha by allowing the background(game) to come through the holes in the hatches
-        private Brush hatchBrush = new HatchBrush(HatchStyle.Percent50, Color.DarkBlue);
+        private Brush hatchBrush = new HatchBrush(HatchStyle.Percent70, Color.FromArgb(128,15,15,15));
 
 
         //keyboard commands
@@ -53,8 +54,8 @@ namespace AssaultCubeHack {
 
         public AssaultHack() {
             //Get permission for working with UnmanagedCode
-            //https://msdn.microsoft.com/en-us/library/xc5yzfbx(v=vs.110)
-            //https://msdn.microsoft.com/en-us/library/ff648663.aspx#c08618429_020
+            //msdn.microsoft.com/en-us/library/xc5yzfbx(v=vs.110)
+            //msdn.microsoft.com/en-us/library/ff648663.aspx#c08618429_020
             try {
                 SecurityPermission sp = new SecurityPermission(SecurityPermissionFlag.UnmanagedCode);
                 sp.Demand();
@@ -75,8 +76,8 @@ namespace AssaultCubeHack {
         /// That is, any windows that are beneath the window are not obscured by the window. 
         /// A window created with this style receives WM_PAINT messages only after all 
         /// sibling windows beneath it have been updated.
-        /// https://msdn.microsoft.com/en-us/library/windows/desktop/ff700543%28v=vs.85%29.aspx
-        /// https://msdn.microsoft.com/en-us/library/aa251511(v=vs.60).aspx
+        /// msdn.microsoft.com/en-us/library/windows/desktop/ff700543%28v=vs.85%29.aspx
+        /// msdn.microsoft.com/en-us/library/aa251511(v=vs.60).aspx
         /// </summary>
         protected override CreateParams CreateParams {
             get {               
@@ -89,19 +90,23 @@ namespace AssaultCubeHack {
 
         private void AssaultHack_Load(object sender, EventArgs e) {          
 
-            //set up window and overlay properties for drawing on top of another process
-            this.WindowState = FormWindowState.Maximized; //maximize window
+            //set up window and overlay properties for drawing on top of another window
+            //this.WindowState = FormWindowState.Maximized; //maximize window
             this.TopMost = true; //set window on top of all others
             this.FormBorderStyle = FormBorderStyle.None; //remove form controls
             picBoxOverlay.Dock = DockStyle.Fill; //fill window with picturebox graphics
-            picBoxOverlay.BackColor = colorTransparencyKey; //set overlay to transparent color
-            this.TransparencyKey = colorTransparencyKey; //set tranparency key
-            //Win32API.SetForegroundWindow(this.Handle);
+            //picBoxOverlay.BackColor = colorTransparencyKey; //set overlay to transparent color
+            //this.TransparencyKey = colorTransparencyKey; //set tranparency key
+            //ControlStyles.SupportsTransparentBackColor
+            //this.SetStyle(ControlStyles.SupportsTransparentBackColor, true);
+
+            //Win32API.SetLayeredWindowAttributes(this.Handle, 0, 128, 2);
 
             //initialize graphics
             BufferedGraphicsContext buffContext = new BufferedGraphicsContext();
             bufferedGraphics = buffContext.Allocate(picBoxOverlay.CreateGraphics(), ClientRectangle);
             bufferedGraphics.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            bufferedGraphics.Graphics.CompositingQuality = CompositingQuality.HighQuality;
 
             //start thread flag
             isRunning = true;
@@ -192,22 +197,22 @@ namespace AssaultCubeHack {
         private void SetOverlayPosition(IntPtr handle) {
 
             //get window handle
-            IntPtr targetHandle = Win32API.FindWindow(null, process.MainWindowTitle);
+            IntPtr targetHandle = NativeMethods.FindWindow(null, process.MainWindowTitle);
             if (targetHandle == IntPtr.Zero)
                 return;
 
             //get position and size of window
-            RECT targetWindowPosition, targetWindowSize;
-            Win32API.GetWindowRect(targetHandle, out targetWindowPosition);
-            Win32API.GetClientRect(targetHandle, out targetWindowSize);
+            NativeMethods.RECT targetWindowPosition, targetWindowSize;
+            NativeMethods.GetWindowRect(targetHandle, out targetWindowPosition);
+            NativeMethods.GetClientRect(targetHandle, out targetWindowSize);
 
             //calculate width and height of full target window
             int width = targetWindowPosition.Right - targetWindowPosition.Left;
             int height = targetWindowPosition.Bottom - targetWindowPosition.Top;
 
             //check if window has borders
-            int dwStyle = Win32API.GetWindowLong(targetHandle, Win32API.GWL_STYLE);
-            if ((dwStyle & Win32API.WS_BORDER) != 0) {
+            int dwStyle = NativeMethods.GetWindowLong(targetHandle, NativeMethods.GWL_STYLE);
+            if ((dwStyle & NativeMethods.WS_BORDER) != 0) {
                 //calculate inner window size without borders      
                 int bWidth = targetWindowPosition.Right - targetWindowPosition.Left;
                 int bHeight = targetWindowPosition.Bottom - targetWindowPosition.Top;
@@ -224,7 +229,7 @@ namespace AssaultCubeHack {
             }
 
             //move and resize self window to match target window
-            Win32API.MoveWindow(handle, targetWindowPosition.Left, targetWindowPosition.Top, width, height, true);
+            NativeMethods.MoveWindow(handle, targetWindowPosition.Left, targetWindowPosition.Top, width, height, true);
 
             //save window size for ESP WorldToScreen translation
             gameWidth = width;
@@ -397,10 +402,12 @@ namespace AssaultCubeHack {
  
             //show player count
             g.DrawString("Players: " + numPlayers, font, new SolidBrush(Color.Wheat), ClientSize.Width / 2, 10);
-            
+
             //debug show view matrix
             //g.DrawString(viewMatrix.ToString(), font, Brushes.White, new Point(300, 30));
             //g.DrawString(gameWidth + "," + gameHeight, font, Brushes.White, new Point());
+            
+            //g.FillRectangle(new SolidBrush(Color.FromArgb(128, 255, 0, 0)), 30, 30, 300, 300);
             
             //draw esp(wall hack)
             foreach (Player p in players) {

@@ -8,84 +8,6 @@ using System.Diagnostics;
 
 namespace AssaultCubeHack {
 
-    /// <summary>
-    /// PInvoke (Platform Invoke) Signatures for calls to external Win32 and other unmanaged APIs from managed code.
-    /// http://www.pinvoke.net
-    /// http://winapi.freetechsecrets.com/
-    /// </summary>
-    class Win32API {
-        // READ FLAGS
-        public static uint PROCESS_VM_READ = 0x0010;
-        public static uint PROCESS_VM_WRITE = 0x0020;
-        public static uint PROCESS_VM_OPERATION = 0x0008;
-        public static uint PAGE_READWRITE = 0x0004;
-
-        // WINDOW FLAGS
-        public static uint WS_BORDER = 0x800000;
-        public static int GWL_STYLE = (-16);
-
-        // KEYS
-        public const int KEY_PRESSED = 0x8000;
-
-        //user32 imports
-        [DllImport("user32.dll", SetLastError = true)]
-        public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
-
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);      
-
-        [DllImport("user32.dll")]
-        public static extern bool GetClientRect(IntPtr hWnd, out RECT lpRect);
-
-        [DllImport("user32.dll")]
-        public static extern bool MoveWindow(IntPtr handle, int x, int y, int width, int height, bool redraw);
-
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool SetWindowPos(IntPtr hWnd, IntPtr hWndInsertAfter, int X, int Y, int cx, int cy, uint uFlags);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-        [DllImport("user32.dll")]
-        public static extern int SetWindowLong(IntPtr hWnd, int nIndex, int dwNewLong);
-
-        [DllImport("user32.dll")]
-        public static extern short GetKeyState(int KeyStates);
-
-        [DllImport("user32.dll")]
-        public static extern bool SetForegroundWindow(IntPtr hWnd);
-
-        //dwmapi imports
-        [DllImport("dwmapi.dll")]
-        public static extern void DwmExtendFrameIntoClientArea(IntPtr hWnd, ref int[] pMargins);
-
-        //kernal32 imports
-        [DllImport("kernel32.dll")]
-        public static extern IntPtr OpenProcess(UInt32 dwAccess, bool inherit, int pid);
-
-        [DllImport("kernel32.dll")]
-        public static extern bool CloseHandle(IntPtr handle);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool ReadProcessMemory(IntPtr hProcess, Int64 lpBaseAddress, [In, Out] byte[] lpBuffer, UInt64 dwSize, out IntPtr lpNumberOfBytesRead);
-
-        [DllImport("kernel32.dll")]
-        public static extern bool WriteProcessMemory(IntPtr hProcess, Int64 lpBaseAddress, [In, Out] byte[] lpBuffer, UInt64 dwSize, out IntPtr lpNumberOfBytesWritten);
-
-        [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool VirtualProtectEx(IntPtr hProcess, IntPtr lpAddress, UInt32 dwSize, uint flNewProtect, out uint lpflOldProtect);
-    }
-
-    [StructLayout(LayoutKind.Sequential)]
-    public struct RECT {
-        public int Left;   // x position of upper-left corner
-        public int Top;    // y position of upper-left corner
-        public int Right;  // x position of lower-right corner
-        public int Bottom; // y position of lower-right corner
-    }
-
     class Memory {
         //handle of process we are attached to
         private static IntPtr handle = IntPtr.Zero;
@@ -96,7 +18,7 @@ namespace AssaultCubeHack {
         /// <param name="pId">process ID</param>
         /// <returns>handle</returns>
         public static IntPtr OpenProcess(int pId) {
-            handle = Win32API.OpenProcess(Win32API.PROCESS_VM_READ | Win32API.PROCESS_VM_WRITE | Win32API.PROCESS_VM_OPERATION, false, pId);
+            handle = NativeMethods.OpenProcess(NativeMethods.PROCESS_VM_READ | NativeMethods.PROCESS_VM_WRITE | NativeMethods.PROCESS_VM_OPERATION, false, pId);
             return handle;
         }
 
@@ -108,7 +30,7 @@ namespace AssaultCubeHack {
         /// Release / invalidate handle.
         /// </summary>
         public static void CloseProcess() {
-            Win32API.CloseHandle(handle);
+            NativeMethods.CloseHandle(handle);
         }
 
         public static bool GetProcessesByName(string pName, out Process process) {
@@ -141,11 +63,11 @@ namespace AssaultCubeHack {
 
             //change access permission so we can write into memory
             uint oldProtect;
-            Win32API.VirtualProtectEx(handle, (IntPtr)address, (uint)buffer.Length, Win32API.PAGE_READWRITE, out oldProtect);
+            NativeMethods.VirtualProtectEx(handle, (IntPtr)address, (uint)buffer.Length, NativeMethods.PAGE_READWRITE, out oldProtect);
 
             //write buffer into memory
             IntPtr ptrBytesWritten;
-            return Win32API.WriteProcessMemory(handle, address, buffer, (uint)buffer.Length, out ptrBytesWritten);
+            return NativeMethods.WriteProcessMemory(handle, address, buffer, (uint)buffer.Length, out ptrBytesWritten);
         }
 
         /// <summary>
@@ -157,7 +79,7 @@ namespace AssaultCubeHack {
 
             //read memory
             IntPtr bytesRead;
-            Win32API.ReadProcessMemory(handle, address, buffer, (uint)buffer.Length, out bytesRead);
+            NativeMethods.ReadProcessMemory(handle, address, buffer, (uint)buffer.Length, out bytesRead);
 
             //allocate handle for buffer
             GCHandle gHandle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
@@ -174,7 +96,7 @@ namespace AssaultCubeHack {
 
             //read memory into buffer
             IntPtr bytesRead;
-            Win32API.ReadProcessMemory(handle, baseAddress, buffer, size, out bytesRead);
+            NativeMethods.ReadProcessMemory(handle, baseAddress, buffer, size, out bytesRead);
 
             //encode bytes to ascii
             for (int i = 0; i < buffer.Length; i++) {
@@ -193,7 +115,7 @@ namespace AssaultCubeHack {
 
             //read memory into buffer
             IntPtr bytesRead;
-            Win32API.ReadProcessMemory(handle, baseAddress, buffer, size, out bytesRead);
+            NativeMethods.ReadProcessMemory(handle, baseAddress, buffer, size, out bytesRead);
 
             //encode bytes to ASCII
             return Encoding.ASCII.GetString(buffer);
@@ -208,7 +130,7 @@ namespace AssaultCubeHack {
 
             //read memory into buffer
             IntPtr bytesRead;
-            Win32API.ReadProcessMemory(handle, baseAddress, buffer, (ulong)buffer.Length, out bytesRead);
+            NativeMethods.ReadProcessMemory(handle, baseAddress, buffer, (ulong)buffer.Length, out bytesRead);
 
             //convert bytes to floats
             Vector3 tmp = new Vector3();
@@ -236,7 +158,7 @@ namespace AssaultCubeHack {
 
             //read memory into buffer
             IntPtr bytesRead;
-            Win32API.ReadProcessMemory(handle, baseAddress, buffer, (ulong)buffer.Length, out bytesRead);
+            NativeMethods.ReadProcessMemory(handle, baseAddress, buffer, (ulong)buffer.Length, out bytesRead);
 
             //convert bytes to floats
             Matrix tmp = new Matrix();
