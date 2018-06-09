@@ -38,6 +38,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <CodeAnalysisRuleSet>AllRules.ruleset</CodeAnalysisRuleSet>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -70,18 +71,18 @@
     <Compile Include="AssaultHack.Designer.cs">
       <DependentUpon>AssaultHack.cs</DependentUpon>
     </Compile>
-    <Compile Include="GlobalKeyboardHook.cs" />
-    <Compile Include="Matrix.cs" />
-    <Compile Include="NativeMethods.cs" />
-    <Compile Include="Offsets.cs" />
-    <Compile Include="AxisAlignedBox.cs" />
-    <Compile Include="Memory.cs" />
-    <Compile Include="Player.cs" />
+    <Compile Include="util\GlobalKeyboardHook.cs" />
+    <Compile Include="structs\Matrix.cs" />
+    <Compile Include="util\NativeMethods.cs" />
+    <Compile Include="game\Offsets.cs" />
+    <Compile Include="structs\AxisAlignedBox.cs" />
+    <Compile Include="util\Memory.cs" />
+    <Compile Include="game\Player.cs" />
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Vector2.cs" />
-    <Compile Include="Vector3.cs" />
-    <Compile Include="Vector4.cs" />
+    <Compile Include="structs\Vector2.cs" />
+    <Compile Include="structs\Vector3.cs" />
+    <Compile Include="structs\Vector4.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />

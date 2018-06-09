@@ -128,6 +128,7 @@ namespace Utilities {
 		#endregion
 
 		#region DLL imports
+
 		/// <summary>
 		/// Sets the windows hook, do the desired event, one of hInstance or threadId must be non-null
 		/// </summary>
@@ -163,7 +164,7 @@ namespace Utilities {
 		/// </summary>
 		/// <param name="lpFileName">Name of the library</param>
 		/// <returns>A handle to the library</returns>
-		[DllImport("kernel32.dll")]
+		[DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
 		static extern IntPtr LoadLibrary(string lpFileName);
 		#endregion
 	}

@@ -53,6 +53,8 @@ namespace AssaultCubeHack {
         private bool aim = false;
 
         public AssaultHack() {
+            InitializeComponent();
+
             //Get permission for working with UnmanagedCode
             //msdn.microsoft.com/en-us/library/xc5yzfbx(v=vs.110)
             //msdn.microsoft.com/en-us/library/ff648663.aspx#c08618429_020
@@ -61,12 +63,7 @@ namespace AssaultCubeHack {
                 sp.Demand();
             } catch (Exception ex) {
                 Console.WriteLine("Demand for SecurityPermissionFlag.UnmanagedCode failed: " + ex.Message);
-            }
-
-            //try to attach to game
-            AttachToGameProcess();
-
-            InitializeComponent();
+            }     
         }
 
         /// <summary>
@@ -88,26 +85,14 @@ namespace AssaultCubeHack {
             }
         }
 
-        private void AssaultHack_Load(object sender, EventArgs e) {          
+        private void AssaultHack_Load(object sender, EventArgs e) {
+            Visible = false;
 
-            //set up window and overlay properties for drawing on top of another window
-            //this.WindowState = FormWindowState.Maximized; //maximize window
-            this.TopMost = true; //set window on top of all others
-            this.FormBorderStyle = FormBorderStyle.None; //remove form controls
-            picBoxOverlay.Dock = DockStyle.Fill; //fill window with picturebox graphics
-            //picBoxOverlay.BackColor = colorTransparencyKey; //set overlay to transparent color
-            //this.TransparencyKey = colorTransparencyKey; //set tranparency key
-            //ControlStyles.SupportsTransparentBackColor
-            //this.SetStyle(ControlStyles.SupportsTransparentBackColor, true);
+            //try to attach to game
+            AttachToGameProcess();           
+        }
 
-            //Win32API.SetLayeredWindowAttributes(this.Handle, 0, 128, 2);
-
-            //initialize graphics
-            BufferedGraphicsContext buffContext = new BufferedGraphicsContext();
-            bufferedGraphics = buffContext.Allocate(picBoxOverlay.CreateGraphics(), ClientRectangle);
-            bufferedGraphics.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
-            bufferedGraphics.Graphics.CompositingQuality = CompositingQuality.HighQuality;
-
+        private void StartThreads() {
             //start thread flag
             isRunning = true;
 
@@ -119,7 +104,7 @@ namespace AssaultCubeHack {
             //start thread for positioning and sizing overlay on top of target process
             windowPosThread = new Thread(UpdateWindow);
             windowPosThread.IsBackground = false;
-            windowPosThread.Start(this.Handle);
+            windowPosThread.Start(Handle);
 
 
             //set up low level keyboard hooking to recieve key events while not in focus
@@ -128,22 +113,48 @@ namespace AssaultCubeHack {
             gkh.KeyUp += new KeyEventHandler(KeyUpEvent);
         }
 
+        private void InitializeOverlayWindowAttributes() {
+            //set up window and overlay properties for drawing on top of another window
+            Visible = true;
+            picBoxOverlay.Visible = true;
+            TopMost = true; //set window on top of all others
+            FormBorderStyle = FormBorderStyle.None; //remove form controls
+            picBoxOverlay.Dock = DockStyle.Fill; //fill window with picturebox graphics
+            //picBoxOverlay.BackColor = colorTransparencyKey; //set overlay to transparent color
+            //this.TransparencyKey = colorTransparencyKey; //set tranparency key
+            //ControlStyles.SupportsTransparentBackColor
+            //this.SetStyle(ControlStyles.SupportsTransparentBackColor, true);
+
+            //Win32API.SetLayeredWindowAttributes(this.Handle, 0, 128, 2);
+
+
+            //initialize graphics           
+            BufferedGraphicsContext buffContext = new BufferedGraphicsContext();
+            bufferedGraphics = buffContext.Allocate(picBoxOverlay.CreateGraphics(), ClientRectangle);
+            bufferedGraphics.Graphics.SmoothingMode = SmoothingMode.AntiAlias;
+            bufferedGraphics.Graphics.CompositingQuality = CompositingQuality.HighQuality;
+               
+        }
+
         /// <summary>
         /// Try to attach to game.
         /// </summary>
         private void AttachToGameProcess() {
+            Visible = false;
+            int count = 0;
             bool success = false;
             do {
                 //check if game is running
                 if (Memory.GetProcessesByName(processName, out process)) {
                     Console.ForegroundColor = ConsoleColor.White;
-                    Console.WriteLine("Process found: " + process.Id + ": " + process.ProcessName);               
+                    Console.Clear();
+                    Console.WriteLine("Process found: " + process.Id + ": " + process.ProcessName);
                     Console.WriteLine("Attaching...");
 
                     //try to attach to game process
                     try {
                         //success  
-                        IntPtr handle = Memory.OpenProcess(process.Id);                        
+                        IntPtr handle = Memory.OpenProcess(process.Id);
                         Console.ForegroundColor = ConsoleColor.Green;
                         Console.WriteLine("Attached Handle: " + handle);
                         if (handle != IntPtr.Zero)
@@ -157,12 +168,20 @@ namespace AssaultCubeHack {
                 } else {
                     //process not found
                     Console.ForegroundColor = ConsoleColor.Yellow;
-                    Console.WriteLine("Process not found.");
-                    Console.ForegroundColor = ConsoleColor.White;
-                    Console.WriteLine("Start game then press any key to try again.");
-                    Console.ReadKey(true);
+                    if (count++ == 0) {
+                        Console.Clear();
+                        Console.Write($"Waiting for {processName}");
+                    } else if (count < 10) {
+                        Console.Write(".");
+                    } else {
+                        count = 0;
+                    }
+                    Thread.Sleep(1000);
                 }
             } while (!success);
+
+            InitializeOverlayWindowAttributes();
+            StartThreads();
         }
 
         /// <summary>
@@ -172,10 +191,14 @@ namespace AssaultCubeHack {
         /// <param name="handle">Handle of overlay form</param>
         private void UpdateWindow(object handle) {
             //update flag, make sure game is still running
-            while (isRunning = Memory.IsProcessRunning(process)) {
+            while (isRunning) {
+                if (!Memory.IsProcessRunning(process)) {
+                    isRunning = false;
+                    continue;
+                }
 
                 //ensure we are on in focus and on top of game
-                Invoke(new MethodInvoker(() => this.BringToFront()));
+                Invoke(new MethodInvoker(() => BringToFront()));
                 SetOverlayPosition((IntPtr)handle);
 
                 //sleep for a bit, we don't need to move around constantly
@@ -184,10 +207,7 @@ namespace AssaultCubeHack {
 
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine("\nProcess " + processName + " ended.");
-            //Console.WriteLine("Press any key to exit...");
-            //Console.ReadKey(true);
-            //Invoke(new MethodInvoker(() => this.Close())); //close         
-            
+            BeginInvoke(new Action(() => AttachToGameProcess()));
         }
 
         /// <summary>
@@ -197,14 +217,16 @@ namespace AssaultCubeHack {
         private void SetOverlayPosition(IntPtr handle) {
 
             //get window handle
-            IntPtr targetHandle = NativeMethods.FindWindow(null, process.MainWindowTitle);
+            IntPtr targetHandle = process.MainWindowHandle;//NativeMethods.FindWindow(null, process.MainWindowTitle);
             if (targetHandle == IntPtr.Zero)
                 return;
 
             //get position and size of window
             NativeMethods.RECT targetWindowPosition, targetWindowSize;
-            NativeMethods.GetWindowRect(targetHandle, out targetWindowPosition);
-            NativeMethods.GetClientRect(targetHandle, out targetWindowSize);
+            if (!NativeMethods.GetWindowRect(targetHandle, out targetWindowPosition))
+                return;
+            if (!NativeMethods.GetClientRect(targetHandle, out targetWindowSize))
+                return;
 
             //calculate width and height of full target window
             int width = targetWindowPosition.Right - targetWindowPosition.Left;
@@ -256,6 +278,7 @@ namespace AssaultCubeHack {
             e.Handled = true;//prevent other programs from processing key
         }
 
+
         /// <summary>
         /// Main update thread. 
         /// Read and write game memory, draw on screen.
@@ -275,7 +298,8 @@ namespace AssaultCubeHack {
                 self.Health = 99999;
                 self.weapon.Ammo = 7331;
                 self.weapon.AmmoClip = 999;
-                self.weapon.DelayTime = 0;//rapid fire*/
+                self.weapon.DelayTime = 0;//rapid fire
+                */
 
                 //players.ForEach(p => p.Velocity = new Vector3(0, 0, 15));//send everyone to the ceiling
                 //players.ForEach(p => p.Pitch = 90); //make everyone look up
@@ -291,6 +315,12 @@ namespace AssaultCubeHack {
 
                 Thread.Sleep(1);
             }
+
+            //cleanup
+            Memory.CloseProcess();
+            bufferedGraphics.Dispose();
+            bufferedGraphics = null;
+
         }
 
         /// <summary>
@@ -346,19 +376,19 @@ namespace AssaultCubeHack {
             //find first living enemy player in view
             Vector2 targetPos = new Vector2();
             Player target = players.Find(p => p.Team != self.Team && p.Health > 0 
-            && viewMatrix.WorldToScreen(p.PositionHead, gameWidth, gameHeight, out targetPos));
+                && viewMatrix.WorldToScreen(p.PositionHead, gameWidth, gameHeight, out targetPos));
             if (target == null) return null;
 
             //calculate distance to crosshair
             Vector2 crossHair = new Vector2(gameWidth / 2, gameHeight / 2);
-            float dist = (float)crossHair.Distance(targetPos);
+            float dist = crossHair.Distance(targetPos);
 
             //find player closest to crosshair
             foreach (Player p in players) {
                 if (p.Team != self.Team && p.Health > 0) {
                     Vector2 headPos;
                     if (viewMatrix.WorldToScreen(p.PositionHead, gameWidth, gameHeight, out headPos)) {
-                        float newDist = (float)crossHair.Distance(headPos);
+                        float newDist = crossHair.Distance(headPos);
                         if (newDist < dist) {
                             target = p;
                             dist = newDist;
@@ -467,8 +497,8 @@ namespace AssaultCubeHack {
             isRunning = false;
 
             //wait for threads to finish
-            windowPosThread.Join();
-            overlayThread.Join();
+            windowPosThread.Join(2000);
+            overlayThread.Join(2000);
 
             //detach from process
             Memory.CloseProcess();

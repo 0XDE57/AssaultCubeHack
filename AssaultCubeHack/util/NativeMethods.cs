@@ -12,6 +12,8 @@ namespace AssaultCubeHack {
     /// http://winapi.freetechsecrets.com/
     /// </summary>
     abstract class NativeMethods {
+
+        #region window structures
         [StructLayout(LayoutKind.Sequential)]
         public struct RECT {
             public int Left;   // x position of upper-left corner
@@ -19,22 +21,51 @@ namespace AssaultCubeHack {
             public int Right;  // x position of lower-right corner
             public int Bottom; // y position of lower-right corner
         }
+        #endregion
 
-        // READ FLAGS
+        #region process flags
         public static uint PROCESS_VM_READ = 0x0010;
         public static uint PROCESS_VM_WRITE = 0x0020;
         public static uint PROCESS_VM_OPERATION = 0x0008;
         public static uint PAGE_READWRITE = 0x0004;
+        #endregion
 
-        // WINDOW FLAGS
+        #region window flags
         public static uint WS_BORDER = 0x800000;
         public static int GWL_STYLE = (-16);
+        #endregion
 
-        // KEYS
+        #region key events
         public const int KEY_PRESSED = 0x8000;
+        #endregion
 
-        //user32 imports
-        [DllImport("user32.dll", SetLastError = true)]
+        #region user32.dll
+        
+        
+        public enum SetWindowsHookCodes : int {
+            WH_JOURNALRECORD = 0,
+            WH_JOURNALPLAYBACK = 1,
+            WH_KEYBOARD = 2,
+            WH_GETMESSAGE = 3,
+            WH_CALLWNDPROC = 4,
+            WH_CBT = 5,
+            WH_SYSMSGFILTER = 6,
+            WH_MOUSE = 7,
+            WH_HARDWARE = 8,
+            WH_DEBUG = 9,
+            WH_SHELL = 10,
+            WH_FOREGROUNDIDLE = 11,
+            WH_CALLWNDPROCRET = 12,
+            WH_KEYBOARD_LL = 13,
+            WH_MOUSE_LL = 14
+        }
+
+        public delegate IntPtr HookProc(int code, IntPtr wParam, IntPtr lParam);
+
+		[DllImport("user32.dll")]
+        public static extern IntPtr SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hMod, uint dwThreadId);
+
+        [DllImport("user32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
         [DllImport("user32.dll")]
@@ -65,12 +96,14 @@ namespace AssaultCubeHack {
 
         [DllImport("user32.dll")]
         public static extern bool SetLayeredWindowAttributes(IntPtr hwnd, uint crKey, byte bAlpha, uint dwFlags);
+        #endregion
 
-        //dwmapi imports
+        #region dwmapi.dll
         [DllImport("dwmapi.dll")]
         public static extern void DwmExtendFrameIntoClientArea(IntPtr hWnd, ref int[] pMargins);
+        #endregion
 
-        //kernal32 imports
+        #region kernel32.dll
         [DllImport("kernel32.dll")]
         public static extern IntPtr OpenProcess(UInt32 dwAccess, bool inherit, int pid);
 
@@ -78,14 +111,15 @@ namespace AssaultCubeHack {
         public static extern bool CloseHandle(IntPtr handle);
 
         [DllImport("kernel32.dll", SetLastError = true)]
-        public static extern bool ReadProcessMemory(IntPtr hProcess, Int64 lpBaseAddress, [In, Out] byte[] lpBuffer, UInt64 dwSize, out IntPtr lpNumberOfBytesRead);
+        public static extern bool ReadProcessMemory(IntPtr hProcess, long lpBaseAddress, [In, Out] byte[] lpBuffer, UInt64 dwSize, out IntPtr lpNumberOfBytesRead);
 
         [DllImport("kernel32.dll")]
-        public static extern bool WriteProcessMemory(IntPtr hProcess, Int64 lpBaseAddress, [In, Out] byte[] lpBuffer, UInt64 dwSize, out IntPtr lpNumberOfBytesWritten);
+        public static extern bool WriteProcessMemory(IntPtr hProcess, long lpBaseAddress, [In, Out] byte[] lpBuffer, UInt64 dwSize, out IntPtr lpNumberOfBytesWritten);
 
         [DllImport("kernel32.dll", SetLastError = true)]
         public static extern bool VirtualProtectEx(IntPtr hProcess, IntPtr lpAddress, UInt32 dwSize, uint flNewProtect, out uint lpflOldProtect);
+        #endregion
     }
 
-    
+
 }

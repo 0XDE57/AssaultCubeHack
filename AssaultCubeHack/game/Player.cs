@@ -34,12 +34,12 @@ namespace AssaultCubeHack {
 
         public float Yaw {
             get { return Memory.Read<float>(pointerPlayer + Offsets.yaw); }
-            set { Memory.Write<float>(pointerPlayer + Offsets.yaw, value); }
+            set { Memory.Write(pointerPlayer + Offsets.yaw, value); }
         }
 
         public float Pitch {
             get { return Memory.Read<float>(pointerPlayer + Offsets.pitch); }
-            set { Memory.Write<float>(pointerPlayer + Offsets.pitch, value); }
+            set { Memory.Write(pointerPlayer + Offsets.pitch, value); }
         }
 
         public Weapon weapon;
