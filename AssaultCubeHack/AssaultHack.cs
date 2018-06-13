@@ -92,27 +92,6 @@ namespace AssaultCubeHack {
             AttachToGameProcess();           
         }
 
-        private void StartThreads() {
-            //start thread flag
-            isRunning = true;
-
-            //start thread for playing with memory and drawing overlay
-            overlayThread = new Thread(UpdateHack);
-            overlayThread.IsBackground = false;
-            overlayThread.Start();
-
-            //start thread for positioning and sizing overlay on top of target process
-            windowPosThread = new Thread(UpdateWindow);
-            windowPosThread.IsBackground = false;
-            windowPosThread.Start(Handle);
-
-
-            //set up low level keyboard hooking to recieve key events while not in focus
-            gkh.HookedKeys.Add(keyAim);
-            gkh.KeyDown += new KeyEventHandler(KeyDownEvent);
-            gkh.KeyUp += new KeyEventHandler(KeyUpEvent);
-        }
-
         private void InitializeOverlayWindowAttributes() {
             //set up window and overlay properties for drawing on top of another window
             Visible = true;
@@ -120,10 +99,9 @@ namespace AssaultCubeHack {
             TopMost = true; //set window on top of all others
             FormBorderStyle = FormBorderStyle.None; //remove form controls
             picBoxOverlay.Dock = DockStyle.Fill; //fill window with picturebox graphics
-            //picBoxOverlay.BackColor = colorTransparencyKey; //set overlay to transparent color
-            //this.TransparencyKey = colorTransparencyKey; //set tranparency key
-            //ControlStyles.SupportsTransparentBackColor
-            //this.SetStyle(ControlStyles.SupportsTransparentBackColor, true);
+            picBoxOverlay.BackColor = colorTransparencyKey; //set overlay to transparent color
+            TransparencyKey = colorTransparencyKey; //set tranparency key
+            SetStyle(ControlStyles.SupportsTransparentBackColor, true);
 
             //Win32API.SetLayeredWindowAttributes(this.Handle, 0, 128, 2);
 
@@ -155,10 +133,14 @@ namespace AssaultCubeHack {
                     try {
                         //success  
                         IntPtr handle = Memory.OpenProcess(process.Id);
-                        Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine("Attached Handle: " + handle);
-                        if (handle != IntPtr.Zero)
+                        if (handle != IntPtr.Zero) {
                             success = true;
+                            Console.ForegroundColor = ConsoleColor.Green;
+                            Console.WriteLine("Attached Handle: " + handle);
+                        } else {
+                            Console.ForegroundColor = ConsoleColor.Red;
+                            Console.WriteLine("Could not attach");
+                        }
                     } catch (Exception ex) {
                         //fail
                         Console.ForegroundColor = ConsoleColor.Red;
@@ -184,6 +166,27 @@ namespace AssaultCubeHack {
             StartThreads();
         }
 
+        private void StartThreads() {
+            //start thread flag
+            isRunning = true;
+
+            //start thread for playing with memory and drawing overlay
+            overlayThread = new Thread(UpdateHack);
+            overlayThread.IsBackground = false;
+            overlayThread.Start();
+
+            //start thread for positioning and sizing overlay on top of target process
+            windowPosThread = new Thread(UpdateWindow);
+            windowPosThread.IsBackground = false;
+            windowPosThread.Start(Handle);
+
+
+            //set up low level keyboard hooking to recieve key events while not in focus
+            gkh.HookedKeys.Add(keyAim);
+            gkh.KeyDown += new KeyEventHandler(KeyDownEvent);
+            gkh.KeyUp += new KeyEventHandler(KeyUpEvent);
+        }
+
         /// <summary>
         /// Thread to make sure overlay is positioned over target process.
         /// Checks to make sure process is still running.
@@ -197,9 +200,17 @@ namespace AssaultCubeHack {
                     continue;
                 }
 
-                //ensure we are on in focus and on top of game
-                Invoke(new MethodInvoker(() => BringToFront()));
+                //ensure we are in focus and on top of game
                 SetOverlayPosition((IntPtr)handle);
+
+                //NativeMethods.SetWindowPos(process.MainWindowHandle, (IntPtr)handle, 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE);
+                
+                /*
+                Invoke(new MethodInvoker(() => {
+                    //use hWndInsertAfter force AssualtCube behind overlay
+                    NativeMethods.SetWindowPos(process.MainWindowHandle, Handle, 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE);
+                }));*/
+
 
                 //sleep for a bit, we don't need to move around constantly
                 Thread.Sleep(200);
@@ -213,19 +224,19 @@ namespace AssaultCubeHack {
         /// <summary>
         /// Set window position and size to overlay target process.
         /// </summary>
-        /// <param name="handle">Handle of overlay form(this form/self)</param>
-        private void SetOverlayPosition(IntPtr handle) {
+        /// <param name="overlayHandle">Handle of overlay form(this form/self)</param>
+        private void SetOverlayPosition(IntPtr overlayHandle) {
 
             //get window handle
-            IntPtr targetHandle = process.MainWindowHandle;//NativeMethods.FindWindow(null, process.MainWindowTitle);
-            if (targetHandle == IntPtr.Zero)
+            IntPtr gameProcessHandle = process.MainWindowHandle;
+            if (gameProcessHandle == IntPtr.Zero)
                 return;
 
             //get position and size of window
             NativeMethods.RECT targetWindowPosition, targetWindowSize;
-            if (!NativeMethods.GetWindowRect(targetHandle, out targetWindowPosition))
+            if (!NativeMethods.GetWindowRect(gameProcessHandle, out targetWindowPosition))
                 return;
-            if (!NativeMethods.GetClientRect(targetHandle, out targetWindowSize))
+            if (!NativeMethods.GetClientRect(gameProcessHandle, out targetWindowSize))
                 return;
 
             //calculate width and height of full target window
@@ -233,7 +244,7 @@ namespace AssaultCubeHack {
             int height = targetWindowPosition.Bottom - targetWindowPosition.Top;
 
             //check if window has borders
-            int dwStyle = NativeMethods.GetWindowLong(targetHandle, NativeMethods.GWL_STYLE);
+            int dwStyle = NativeMethods.GetWindowLong(gameProcessHandle, NativeMethods.GWL_STYLE);
             if ((dwStyle & NativeMethods.WS_BORDER) != 0) {
                 //calculate inner window size without borders      
                 int bWidth = targetWindowPosition.Right - targetWindowPosition.Left;
@@ -251,7 +262,12 @@ namespace AssaultCubeHack {
             }
 
             //move and resize self window to match target window
-            NativeMethods.MoveWindow(handle, targetWindowPosition.Left, targetWindowPosition.Top, width, height, true);
+            NativeMethods.MoveWindow(overlayHandle, targetWindowPosition.Left, targetWindowPosition.Top, width, height, true);
+
+            //use hWndInsertAfter force AssualtCube behind overlay
+            //NativeMethods.SetWindowPos(overlayHandle, (IntPtr)NativeMethods.HWND_TOPMOST, 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE);
+            NativeMethods.SetWindowPos(gameProcessHandle, overlayHandle, 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE);
+            
 
             //save window size for ESP WorldToScreen translation
             gameWidth = width;

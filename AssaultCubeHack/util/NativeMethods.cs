@@ -31,8 +31,13 @@ namespace AssaultCubeHack {
         #endregion
 
         #region window flags
-        public static uint WS_BORDER = 0x800000;
-        public static int GWL_STYLE = (-16);
+        public const uint WS_BORDER = 0x800000;
+        public const int GWL_STYLE = (-16);
+        public const int HWND_TOPMOST = -1;
+        public const int HWND_NOTOPMOST = -2;
+        public const int SWP_NOMOVE = 0x0002;
+        public const int SWP_NOSIZE = 0x0001;
+        public const int SWP_SHOWWINDOW = 0x0040;
         #endregion
 
         #region key events
