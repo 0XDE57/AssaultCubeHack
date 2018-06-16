@@ -1,0 +1,9 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="AssaultCubeHack.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="AimKey" Type="System.Windows.Forms.Keys" Scope="User">
+      <Value Profile="(Default)">Capital</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

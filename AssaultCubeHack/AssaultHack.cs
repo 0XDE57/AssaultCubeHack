@@ -1,4 +1,5 @@
-﻿using System;
+﻿using AssaultCubeHack.Properties;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -49,7 +50,6 @@ namespace AssaultCubeHack {
 
         //keyboard commands
         private GlobalKeyboardHook gkh = new GlobalKeyboardHook();
-        private const Keys keyAim = Keys.CapsLock;
         private bool aim = false;
 
         public AssaultHack() {
@@ -182,7 +182,7 @@ namespace AssaultCubeHack {
 
 
             //set up low level keyboard hooking to recieve key events while not in focus
-            gkh.HookedKeys.Add(keyAim);
+            gkh.HookedKeys.Add(Settings.Default.AimKey);
             gkh.KeyDown += new KeyEventHandler(KeyDownEvent);
             gkh.KeyUp += new KeyEventHandler(KeyUpEvent);
         }
@@ -202,15 +202,6 @@ namespace AssaultCubeHack {
 
                 //ensure we are in focus and on top of game
                 SetOverlayPosition((IntPtr)handle);
-
-                //NativeMethods.SetWindowPos(process.MainWindowHandle, (IntPtr)handle, 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE);
-                
-                /*
-                Invoke(new MethodInvoker(() => {
-                    //use hWndInsertAfter force AssualtCube behind overlay
-                    NativeMethods.SetWindowPos(process.MainWindowHandle, Handle, 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE);
-                }));*/
-
 
                 //sleep for a bit, we don't need to move around constantly
                 Thread.Sleep(200);
@@ -265,7 +256,6 @@ namespace AssaultCubeHack {
             NativeMethods.MoveWindow(overlayHandle, targetWindowPosition.Left, targetWindowPosition.Top, width, height, true);
 
             //use hWndInsertAfter force AssualtCube behind overlay
-            //NativeMethods.SetWindowPos(overlayHandle, (IntPtr)NativeMethods.HWND_TOPMOST, 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE);
             NativeMethods.SetWindowPos(gameProcessHandle, overlayHandle, 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE);
             
 
@@ -278,7 +268,7 @@ namespace AssaultCubeHack {
         /// Key event when a hooked key is pressed.
         /// </summary>
         private void KeyDownEvent(object sender, KeyEventArgs e) {
-            aim = (e.KeyCode == keyAim);
+            aim = (e.KeyCode == Settings.Default.AimKey);
 
             e.Handled = true;//prevent other programs from processing key
         }
@@ -287,7 +277,7 @@ namespace AssaultCubeHack {
         /// Key event when a hooked key is released.
         /// </summary>
         private void KeyUpEvent(object sender, KeyEventArgs e) {
-            if (e.KeyCode == keyAim) {
+            if (e.KeyCode == Settings.Default.AimKey) {
                 aim = false;
             }
 
@@ -459,33 +449,36 @@ namespace AssaultCubeHack {
             foreach (Player p in players) {
                 if (p.Health <= 0) continue;
 
+                int offset = 20;
                 Pen color = p.Team == self.Team ? Pens.Green : Pens.Red;
                 Vector2 headPos, footPos;
                 if(viewMatrix.WorldToScreen(p.PositionHead, gameWidth, gameHeight, out headPos) &&
                     viewMatrix.WorldToScreen(p.PositionFoot, gameWidth, gameHeight, out footPos)) {
                     float height = Math.Abs(headPos.y - footPos.y);
                     float width = height / 2;
-                    g.DrawRectangle(color, headPos.x-width/2, headPos.y, width, height);
+                    g.DrawRectangle(color, headPos.x-width/2, headPos.y-offset, width, height+offset);
                 }
                     
             }
 
+            bool drawPlayerList = false;
+            if (drawPlayerList) {
+                //test draw player list
+                if (players.Count > 0) {
+                    int spacing = (int)font.Size + 1;
+                    int s = 0;
+                    //add background to make text more visible
+                    g.FillRectangle(hatchBrush, 20, 20, 180, (spacing * players.Count) + (spacing / 2));
+                    foreach (Player p in players) {
 
-            //test draw player list
-            if (players.Count > 0) {
-                int spacing = (int)font.Size + 1;
-                int s = 0;
-                //add background to make text more visible
-                g.FillRectangle(hatchBrush, 20, 20, 180, (spacing * players.Count) + (spacing / 2));
-                foreach (Player p in players) {
-
-                    Point pos = new Point(20, 20 + (s * spacing));
-                    Brush color = p.Team == self.Team ? Brushes.Green : Brushes.Red;
-                    DrawStringOutlined(g, p.Name, pos, font, color, Pens.DarkBlue);
-                    //g.DrawString(p.Name, font, color, pos.X, pos.Y);
-                    //g.DrawOutline();
-                    //DrawOutline(g)
-                    s++;
+                        Point pos = new Point(20, 20 + (s * spacing));
+                        Brush color = p.Team == self.Team ? Brushes.Green : Brushes.Red;
+                        DrawStringOutlined(g, p.Name, pos, font, color, Pens.DarkBlue);
+                        //g.DrawString(p.Name, font, color, pos.X, pos.Y);
+                        //g.DrawOutline();
+                        //DrawOutline(g)
+                        s++;
+                    }
                 }
             }
 
