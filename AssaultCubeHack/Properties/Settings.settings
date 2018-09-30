@@ -5,5 +5,26 @@
     <Setting Name="AimKey" Type="System.Windows.Forms.Keys" Scope="User">
       <Value Profile="(Default)">Capital</Value>
     </Setting>
+    <Setting Name="ShowNick" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="ShowHealth" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="ActivateHotkeys" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="HotKeyShowNick" Type="System.Windows.Forms.Keys" Scope="User">
+      <Value Profile="(Default)">F11</Value>
+    </Setting>
+    <Setting Name="HotKeyShowHealth" Type="System.Windows.Forms.Keys" Scope="User">
+      <Value Profile="(Default)">F12</Value>
+    </Setting>
+    <Setting Name="ShowHealthAsString" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="HotKeyHealthAsString" Type="System.Windows.Forms.Keys" Scope="User">
+      <Value Profile="(Default)">F10</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
