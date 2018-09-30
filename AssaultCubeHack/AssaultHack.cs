@@ -54,8 +54,17 @@ namespace AssaultCubeHack
     private GlobalKeyboardHook gkh = new GlobalKeyboardHook();
     private bool aim = false;
 
+
+    // runtime Settings
+    private bool _showNames;
+    private bool _showHealth;
+    private bool _showNamesAsString;
+
     public AssaultHack()
     {
+      _showNames = Settings.Default.ShowNick;
+      _showHealth = Settings.Default.ShowHealth;
+      _showNamesAsString = Settings.Default.ShowHealthAsString;
       InitializeComponent();
 
       //Get permission for working with UnmanagedCode
@@ -209,6 +218,12 @@ namespace AssaultCubeHack
 
 
       //set up low level keyboard hooking to recieve key events while not in focus
+      if (Settings.Default.ActivateHotkeys)
+      {
+        gkh.HookedKeys.Add(Settings.Default.HotKeyHealthAsString);
+        gkh.HookedKeys.Add(Settings.Default.HotKeyShowHealth);
+        gkh.HookedKeys.Add(Settings.Default.HotKeyShowNick);
+      }
       gkh.HookedKeys.Add(Settings.Default.AimKey);
       gkh.KeyDown += new KeyEventHandler(KeyDownEvent);
       gkh.KeyUp += new KeyEventHandler(KeyUpEvent);
@@ -314,6 +329,18 @@ namespace AssaultCubeHack
       if (e.KeyCode == Settings.Default.AimKey)
       {
         aim = false;
+      }
+      else if(e.KeyCode == Settings.Default.HotKeyShowNick)
+      {
+        _showNames = !_showNames;
+      }
+      else if (e.KeyCode == Settings.Default.HotKeyShowHealth)
+      {
+        _showHealth = !_showHealth;
+      }
+      else if(e.KeyCode == Settings.Default.HotKeyHealthAsString)
+      {
+        _showNamesAsString = !_showNamesAsString;
       }
 
       e.Handled = true;//prevent other programs from processing key
@@ -507,17 +534,17 @@ namespace AssaultCubeHack
           float height = Math.Abs(headPos.y - footPos.y);
           float width = height / 2;
           g.DrawRectangle(color, headPos.x - width / 2, headPos.y - offset, width, height + offset);
-          if (Settings.Default.ShowNick)
+          if (_showNames)
           {
             g.DrawString(p.Name, font, new SolidBrush(Color.Wheat), headPos.x - width / 2, headPos.y - offset);
-            if (Settings.Default.ShowHealth)
+            if (_showHealth)
             {
-              g.DrawString(p.Health.ToString(), font, (p.Health == 100 ? new SolidBrush(Color.Green) : (p.Health >= 50 ? new SolidBrush(Color.Yellow) : new SolidBrush(Color.Red))), headPos.x - width / 2, (headPos.y - offset) + font.Height);
+              g.DrawString(_showNamesAsString?p.Health.ToString():healthBars(p.Health), font, (p.Health == 100 ? new SolidBrush(Color.Green) : (p.Health >= 50 ? new SolidBrush(Color.Yellow) : new SolidBrush(Color.Red))), headPos.x - width / 2, (headPos.y - offset) + font.Height);
             }
           }
-          else if (Settings.Default.ShowHealth)
+          else if (_showHealth)
           {
-            g.DrawString(p.Health.ToString(), font, (p.Health == 100 ? new SolidBrush(Color.Green) : (p.Health >= 50 ? new SolidBrush(Color.Yellow) : new SolidBrush(Color.Red))), headPos.x - width / 2, headPos.y - offset);
+            g.DrawString(_showNamesAsString ? p.Health.ToString() : healthBars(p.Health), font, (p.Health == 100 ? new SolidBrush(Color.Green) : (p.Health >= 50 ? new SolidBrush(Color.Yellow) : new SolidBrush(Color.Red))), headPos.x - width / 2, headPos.y - offset);
           }
         }
 
@@ -549,6 +576,17 @@ namespace AssaultCubeHack
 
       //render
       bufferedGraphics.Render();
+    }
+
+    private string healthBars(int health)
+    {
+      int result = (health / 10);
+      string bars = result>0?"":"|";
+      for (int i = 0; i < result; i++)
+      {
+        bars += "|";
+      }
+      return bars;
     }
 
     private static void DrawStringOutlined(Graphics g, string text, Point pos, Font font, Brush colorText, Pen colorOutline)
