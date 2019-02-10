@@ -34,5 +34,29 @@ namespace AssaultCubeHack.Properties {
                 this["AimKey"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Red")]
+        public global::System.Drawing.Color EnemyColor {
+            get {
+                return ((global::System.Drawing.Color)(this["EnemyColor"]));
+            }
+            set {
+                this["EnemyColor"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("Green")]
+        public global::System.Drawing.Color TeamColor {
+            get {
+                return ((global::System.Drawing.Color)(this["TeamColor"]));
+            }
+            set {
+                this["TeamColor"] = value;
+            }
+        }
     }
 }

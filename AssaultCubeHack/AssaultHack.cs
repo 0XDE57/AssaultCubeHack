@@ -281,7 +281,7 @@ namespace AssaultCubeHack {
                 aim = false;
             }
 
-            e.Handled = true;//prevent other programs from processing key
+            e.Handled = true;
         }
 
 
@@ -420,7 +420,7 @@ namespace AssaultCubeHack {
             players.Clear();
             numPlayers = Memory.Read<int>(Offsets.baseGame + Offsets.numPlayers);
             int ptrPlayerArray = Memory.Read<int>(Offsets.baseGame + Offsets.ptrPlayerArray);
-            for (int i = 1; i < numPlayers; i++) {
+            for (int i = 0; i < numPlayers; i++) {
                 //each pointer is 4 bytes apart in the array
                 //pointer to player = pointer to array + index of player * byte size
                 int ptrPlayer = Memory.Read<int>(ptrPlayerArray + (i * 0x04));
@@ -450,7 +450,7 @@ namespace AssaultCubeHack {
                 if (p.Health <= 0) continue;
 
                 int offset = 20;
-                Pen color = p.Team == self.Team ? Pens.Green : Pens.Red;
+                Pen color = p.Team == self.Team ? new Pen(Settings.Default.TeamColor) : new Pen(Settings.Default.EnemyColor);
                 Vector2 headPos, footPos;
                 if(viewMatrix.WorldToScreen(p.PositionHead, gameWidth, gameHeight, out headPos) &&
                     viewMatrix.WorldToScreen(p.PositionFoot, gameWidth, gameHeight, out footPos)) {

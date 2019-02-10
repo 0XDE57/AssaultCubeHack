@@ -48,7 +48,7 @@ namespace AssaultCubeHack {
 
 
         public override string ToString() {
-            //display matrix in a cleanly in a grid
+            //display matrix cleanly in a grid
             return String.Format(
                 "{0,8}{1,8}{2,8}{3,8}\n" +
                 "{4,8}{5,8}{6,8}{7,8}\n" +

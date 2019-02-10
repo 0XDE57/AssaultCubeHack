@@ -86,7 +86,7 @@ namespace AssaultCubeHack {
             NativeMethods.ReadProcessMemory(handle, address, buffer, (uint)buffer.Length, out bytesRead);
 
             //allocate handle for buffer
-            GCHandle gHandle = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+            GCHandle gHandle = GCHandle.Alloc(buffer, GCHandleType.Pinned);//TODO: this line is crashing in Release but not Debug compile. why? AccessViolationException
             //arrange data from unmanaged block of memory to structure of type T
             T data = (T)Marshal.PtrToStructure(gHandle.AddrOfPinnedObject(), typeof(T));
             gHandle.Free(); //release handle
@@ -94,7 +94,7 @@ namespace AssaultCubeHack {
             return data;
         }
 
-        public static string ReadString(long baseAddress, UInt64 size) {
+        public static string ReadString(long baseAddress, ulong size) {
             //create buffer for string
             byte[] buffer = new byte[size];
 
@@ -113,7 +113,7 @@ namespace AssaultCubeHack {
             return Encoding.ASCII.GetString(buffer);
         }
 
-        public static string ReadString2(long baseAddress, UInt64 size) {
+        public static string ReadString2(long baseAddress, ulong size) {
             //create buffer for string
             byte[] buffer = new byte[size];
 

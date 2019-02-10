@@ -5,5 +5,11 @@
     <Setting Name="AimKey" Type="System.Windows.Forms.Keys" Scope="User">
       <Value Profile="(Default)">Capital</Value>
     </Setting>
+    <Setting Name="EnemyColor" Type="System.Drawing.Color" Scope="User">
+      <Value Profile="(Default)">Red</Value>
+    </Setting>
+    <Setting Name="TeamColor" Type="System.Drawing.Color" Scope="User">
+      <Value Profile="(Default)">Green</Value>
+    </Setting>
   </Settings>
 </SettingsFile>
