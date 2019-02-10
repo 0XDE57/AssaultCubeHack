@@ -270,7 +270,7 @@ namespace AssaultCubeHack {
         private void KeyDownEvent(object sender, KeyEventArgs e) {
             aim = (e.KeyCode == Settings.Default.AimKey);
 
-            e.Handled = true;//prevent other programs from processing key
+            e.Handled = true;
         }
 
         /// <summary>
