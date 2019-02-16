@@ -7,14 +7,20 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "AssaultCubeHack", "AssaultC
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|x64 = Debug|x64
 		Debug|x86 = Debug|x86
+		Release|x64 = Release|x64
 		Release|x86 = Release|x86
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{AB426923-AEF1-4925-BF1C-F6C37FEDA00E}.Debug|x86.ActiveCfg = Debug|Any CPU
-		{AB426923-AEF1-4925-BF1C-F6C37FEDA00E}.Debug|x86.Build.0 = Debug|Any CPU
-		{AB426923-AEF1-4925-BF1C-F6C37FEDA00E}.Release|x86.ActiveCfg = Release|Any CPU
-		{AB426923-AEF1-4925-BF1C-F6C37FEDA00E}.Release|x86.Build.0 = Release|Any CPU
+		{AB426923-AEF1-4925-BF1C-F6C37FEDA00E}.Debug|x64.ActiveCfg = Debug|x64
+		{AB426923-AEF1-4925-BF1C-F6C37FEDA00E}.Debug|x64.Build.0 = Debug|x64
+		{AB426923-AEF1-4925-BF1C-F6C37FEDA00E}.Debug|x86.ActiveCfg = Debug|x86
+		{AB426923-AEF1-4925-BF1C-F6C37FEDA00E}.Debug|x86.Build.0 = Debug|x86
+		{AB426923-AEF1-4925-BF1C-F6C37FEDA00E}.Release|x64.ActiveCfg = Release|x64
+		{AB426923-AEF1-4925-BF1C-F6C37FEDA00E}.Release|x64.Build.0 = Release|x64
+		{AB426923-AEF1-4925-BF1C-F6C37FEDA00E}.Release|x86.ActiveCfg = Release|x86
+		{AB426923-AEF1-4925-BF1C-F6C37FEDA00E}.Release|x86.Build.0 = Release|x86
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
