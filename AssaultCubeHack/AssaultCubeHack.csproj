@@ -66,6 +66,7 @@
     <Compile Include="AssaultHack.Designer.cs">
       <DependentUpon>AssaultHack.cs</DependentUpon>
     </Compile>
+    <Compile Include="game\GameManager.cs" />
     <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DesignTimeSharedInput>True</DesignTimeSharedInput>

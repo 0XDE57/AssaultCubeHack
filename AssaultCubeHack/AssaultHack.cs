@@ -1,4 +1,5 @@
-﻿using AssaultCubeHack.Properties;
+﻿using AssaultCubeHack.game;
+using AssaultCubeHack.Properties;
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
@@ -19,22 +20,12 @@ namespace AssaultCubeHack {
 
         //target process
         private const string processName = "ac_client";
-        private Process process;
-          
+        private static GameManager game;
 
         //threads for updating rendering
         private Thread overlayThread;
         private Thread windowPosThread;
         private volatile bool isRunning = false;
-
-
-        //game objects
-        private Player self;
-        private List<Player> players = new List<Player>();
-        private int numPlayers;
-        private Matrix viewMatrix;
-        private int gameWidth, gameHeight;
-
 
         //initialize rendering stuff
         private BufferedGraphics bufferedGraphics;
@@ -80,7 +71,7 @@ namespace AssaultCubeHack {
             get {               
                 CreateParams CP = base.CreateParams;
                 int WS_EX_TRANSPARENT = 0x00000020;
-                CP.ExStyle = CP.ExStyle | WS_EX_TRANSPARENT;
+                CP.ExStyle |= WS_EX_TRANSPARENT;
                 return CP;
             }
         }
@@ -123,6 +114,7 @@ namespace AssaultCubeHack {
             bool success = false;
             do {
                 //check if game is running
+                Process process;
                 if (Memory.GetProcessesByName(processName, out process)) {
                     Console.ForegroundColor = ConsoleColor.White;
                     Console.Clear();
@@ -132,11 +124,12 @@ namespace AssaultCubeHack {
                     //try to attach to game process
                     try {
                         //success  
-                        IntPtr handle = Memory.OpenProcess(process.Id);
-                        if (handle != IntPtr.Zero) {
+                        //IntPtr handle = Memory.OpenProcess(process.Id);
+                        game = new GameManager(process);                       
+                        if (game.IsAttached) {
                             success = true;
                             Console.ForegroundColor = ConsoleColor.Green;
-                            Console.WriteLine("Attached Handle: " + handle);
+                            Console.WriteLine("Attached Handle: " + game.GameMemory.GetHandle());
                         } else {
                             Console.ForegroundColor = ConsoleColor.Red;
                             Console.WriteLine("Could not attach");
@@ -171,13 +164,15 @@ namespace AssaultCubeHack {
             isRunning = true;
 
             //start thread for playing with memory and drawing overlay
-            overlayThread = new Thread(UpdateHack);
-            overlayThread.IsBackground = false;
+            overlayThread = new Thread(UpdateHack) {
+                IsBackground = false
+            };
             overlayThread.Start();
 
             //start thread for positioning and sizing overlay on top of target process
-            windowPosThread = new Thread(UpdateWindow);
-            windowPosThread.IsBackground = false;
+            windowPosThread = new Thread(UpdateWindow) {
+                IsBackground = false
+            };
             windowPosThread.Start(Handle);
 
 
@@ -195,7 +190,7 @@ namespace AssaultCubeHack {
         private void UpdateWindow(object handle) {
             //update flag, make sure game is still running
             while (isRunning) {
-                if (!Memory.IsProcessRunning(process)) {
+                if (!Memory.IsProcessRunning(game.GameProcess)) {
                     isRunning = false;
                     continue;
                 }
@@ -219,15 +214,14 @@ namespace AssaultCubeHack {
         private void SetOverlayPosition(IntPtr overlayHandle) {
 
             //get window handle
-            IntPtr gameProcessHandle = process.MainWindowHandle;
+            IntPtr gameProcessHandle = game.GameProcess.MainWindowHandle;
             if (gameProcessHandle == IntPtr.Zero)
                 return;
 
             //get position and size of window
-            NativeMethods.RECT targetWindowPosition, targetWindowSize;
-            if (!NativeMethods.GetWindowRect(gameProcessHandle, out targetWindowPosition))
+            if (!NativeMethods.GetWindowRect(gameProcessHandle, out NativeMethods.RECT targetWindowPosition))
                 return;
-            if (!NativeMethods.GetClientRect(gameProcessHandle, out targetWindowSize))
+            if (!NativeMethods.GetClientRect(gameProcessHandle, out NativeMethods.RECT targetWindowSize))
                 return;
 
             //calculate width and height of full target window
@@ -257,11 +251,10 @@ namespace AssaultCubeHack {
 
             //use hWndInsertAfter force AssualtCube behind overlay
             NativeMethods.SetWindowPos(gameProcessHandle, overlayHandle, 0, 0, 0, 0, NativeMethods.SWP_NOMOVE | NativeMethods.SWP_NOSIZE);
-            
+
 
             //save window size for ESP WorldToScreen translation
-            gameWidth = width;
-            gameHeight = height;
+            game.UpdateSize(width, height);
         }
 
         /// <summary>
@@ -295,25 +288,17 @@ namespace AssaultCubeHack {
             while (isRunning) {
 
                 //read
-                ReadGameMemory();
+                game.ReadGameMemory();
 
-
-                //Test Hacks
-                //self hacks, infinite health and ammo
-                /*
-                self.Health = 99999;
-                self.weapon.Ammo = 7331;
-                self.weapon.AmmoClip = 999;
-                self.weapon.DelayTime = 0;//rapid fire
-                */
-
-                //players.ForEach(p => p.Velocity = new Vector3(0, 0, 15));//send everyone to the ceiling
-                //players.ForEach(p => p.Pitch = 90); //make everyone look up
-                //players.ForEach(p => p.Position = new Vector3(130, 130, 10)); //set everyone to same spot
-                //players.ForEach(p => p.Health = 0);//1 hit kills on anyone
+                bool cheat = true;
+                if (cheat) {
+                    game.TestHacks();
+                }
 
                 //aimbot
-                UpdateAimbot();
+                if (aim) {
+                    game.UpdateAimbot();
+                }
 
                 //draw
                 Draw(bufferedGraphics.Graphics);
@@ -322,157 +307,52 @@ namespace AssaultCubeHack {
                 Thread.Sleep(1);
             }
 
-            //cleanup
-            Memory.CloseProcess();
+            //cleanup        
+            game.Close();
             bufferedGraphics.Dispose();
             bufferedGraphics = null;
 
         }
-
-        /// <summary>
-        /// Aim at closest enemy.
-        /// </summary>
-        private void UpdateAimbot() {
-            //if not aiming or no players, escape
-            if (!aim || players.Count == 0) return;
-
-            //find closest enemy player
-            //Player target = GetClosestEnemy();
-            Player target = GetClosestEnemyToCrossHair();
-            if (target == null) return;
-
-            //calculate horizontal angle between enemy and player (yaw)
-            float dx = target.PositionFoot.x - self.PositionFoot.x;
-            float dy = target.PositionFoot.y - self.PositionFoot.y;
-            double angleYaw = Math.Atan2(dy, dx) * 180 / Math.PI;
-
-            //calculate verticle angle between enemy and player (pitch)
-            double distance = Math.Sqrt(dx * dx + dy * dy);
-            float dz = target.PositionFoot.z - self.PositionFoot.z;
-            double anglePitch = Math.Atan2(dz, distance) * 180 / Math.PI;
-
-            //set self angles to calculated angles
-            self.Yaw = (float)angleYaw + 90;
-            self.Pitch = (float)anglePitch;
-
-        }
-
-        /// <summary>
-        /// Get enemy nearest to player.
-        /// </summary>
-        private Player GetClosestEnemy() {
-            //find first living enemy player
-            Player target = players.Find(p => p.Team != self.Team && p.Health > 0);
-            if (target == null) return null;
-
-            //if a closer enemy is found, set them as target
-            foreach (Player player in players) {
-                if (player.Team != self.Team && player.Health > 0 
-                    && player.PositionFoot.Distance(self.PositionFoot) < target.PositionFoot.Distance(self.PositionFoot))
-                    target = player;
-            }
-
-            return target;
-        }
-
-        /// <summary>
-        /// Get enemy nearest to crosshair.
-        /// </summary>
-        private Player GetClosestEnemyToCrossHair() {
-            //find first living enemy player in view
-            Vector2 targetPos = new Vector2();
-            Player target = players.Find(p => p.Team != self.Team && p.Health > 0 
-                && viewMatrix.WorldToScreen(p.PositionHead, gameWidth, gameHeight, out targetPos));
-            if (target == null) return null;
-
-            //calculate distance to crosshair
-            Vector2 crossHair = new Vector2(gameWidth / 2, gameHeight / 2);
-            float dist = crossHair.Distance(targetPos);
-
-            //find player closest to crosshair
-            foreach (Player p in players) {
-                if (p.Team != self.Team && p.Health > 0) {
-                    Vector2 headPos;
-                    if (viewMatrix.WorldToScreen(p.PositionHead, gameWidth, gameHeight, out headPos)) {
-                        float newDist = crossHair.Distance(headPos);
-                        if (newDist < dist) {
-                            target = p;
-                            dist = newDist;
-                        }
-                    }
-                }
-            }
-
-            return target;
-        }
-
-        /// <summary>
-        /// Read the memory of the game and save data into objects.
-        /// </summary>
-        private void ReadGameMemory() {
-            if (!isRunning) return;
-
-            //read self
-            int ptrPlayerSelf = Memory.Read<int>(Offsets.baseGame + Offsets.ptrPlayerEntity);
-            self = new Player(ptrPlayerSelf);
-            
-            //read players
-            players.Clear();
-            numPlayers = Memory.Read<int>(Offsets.baseGame + Offsets.numPlayers);
-            int ptrPlayerArray = Memory.Read<int>(Offsets.baseGame + Offsets.ptrPlayerArray);
-            for (int i = 0; i < numPlayers; i++) {
-                //each pointer is 4 bytes apart in the array
-                //pointer to player = pointer to array + index of player * byte size
-                int ptrPlayer = Memory.Read<int>(ptrPlayerArray + (i * 0x04));
-                players.Add(new Player(ptrPlayer));
-            }
-
-            //read view matrix
-            viewMatrix = Memory.ReadMatrix(Offsets.viewMatrix);
-        }
-
 
         private void Draw(Graphics g) {
             //clear
             ClearScreen(g);
  
             //show player count
-            g.DrawString("Players: " + numPlayers, font, new SolidBrush(Color.Wheat), ClientSize.Width / 2, 10);
+            g.DrawString("Players: " + game.NumPlayers, font, new SolidBrush(Color.Wheat), ClientSize.Width / 2, 10);
 
             //debug show view matrix
             //g.DrawString(viewMatrix.ToString(), font, Brushes.White, new Point(300, 30));
             //g.DrawString(gameWidth + "," + gameHeight, font, Brushes.White, new Point());
             
-            //g.FillRectangle(new SolidBrush(Color.FromArgb(128, 255, 0, 0)), 30, 30, 300, 300);
             
             //draw esp(wall hack)
-            foreach (Player p in players) {
+            foreach (Player p in game.Players) {
                 if (p.Health <= 0) continue;
 
                 int offset = 20;
-                Pen color = p.Team == self.Team ? new Pen(Settings.Default.TeamColor) : new Pen(Settings.Default.EnemyColor);
-                Vector2 headPos, footPos;
-                if(viewMatrix.WorldToScreen(p.PositionHead, gameWidth, gameHeight, out headPos) &&
-                    viewMatrix.WorldToScreen(p.PositionFoot, gameWidth, gameHeight, out footPos)) {
+                Pen color = p.Team == game.Self.Team ? new Pen(Settings.Default.TeamColor) : new Pen(Settings.Default.EnemyColor);
+                if (game.ViewMatrix.WorldToScreen(p.PositionHead, game.Width, game.Height, out Vector2 headPos) &&
+                    game.ViewMatrix.WorldToScreen(p.PositionFoot, game.Width, game.Height, out Vector2 footPos)) {
                     float height = Math.Abs(headPos.y - footPos.y);
                     float width = height / 2;
-                    g.DrawRectangle(color, headPos.x-width/2, headPos.y-offset, width, height+offset);
+                    g.DrawRectangle(color, headPos.x - width / 2, headPos.y - offset, width, height + offset);
                 }
-                    
+
             }
 
             bool drawPlayerList = false;
             if (drawPlayerList) {
                 //test draw player list
-                if (players.Count > 0) {
+                if (game.Players.Count > 0) {
                     int spacing = (int)font.Size + 1;
                     int s = 0;
                     //add background to make text more visible
-                    g.FillRectangle(hatchBrush, 20, 20, 180, (spacing * players.Count) + (spacing / 2));
-                    foreach (Player p in players) {
+                    g.FillRectangle(hatchBrush, 20, 20, 180, (spacing * game.Players.Count) + (spacing / 2));
+                    foreach (Player p in game.Players) {
 
                         Point pos = new Point(20, 20 + (s * spacing));
-                        Brush color = p.Team == self.Team ? Brushes.Green : Brushes.Red;
+                        Brush color = p.Team == game.Self.Team ? Brushes.Green : Brushes.Red;
                         DrawStringOutlined(g, p.Name, pos, font, color, Pens.DarkBlue);
                         //g.DrawString(p.Name, font, color, pos.X, pos.Y);
                         //g.DrawOutline();
@@ -510,7 +390,9 @@ namespace AssaultCubeHack {
             overlayThread.Join(2000);
 
             //detach from process
-            Memory.CloseProcess();
+            if (game != null) {
+                game.Close();
+            }
 
             Environment.Exit(0);
         }
