@@ -25,12 +25,8 @@ namespace AssaultCubeHack.game {
         public GameManager(Process process) {
             GameProcess = process;
             GameMemory = new Memory(process.Id);
-            
-            if (GameMemory.GetHandle() == IntPtr.Zero) {
-                IsAttached = false;
-            } else {
-                IsAttached = true;
-            }
+
+            IsAttached = (GameMemory.GetHandle() != IntPtr.Zero);
         }
 
 

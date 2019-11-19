@@ -123,8 +123,6 @@ namespace AssaultCubeHack {
 
                     //try to attach to game process
                     try {
-                        //success  
-                        //IntPtr handle = Memory.OpenProcess(process.Id);
                         game = new GameManager(process);                       
                         if (game.IsAttached) {
                             success = true;
@@ -288,7 +286,7 @@ namespace AssaultCubeHack {
             while (isRunning) {
 
                 //read
-                game.ReadGameMemory();
+                game.ReadGameMemory();               
 
                 bool cheat = true;
                 if (cheat) {
